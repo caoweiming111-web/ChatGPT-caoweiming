@@ -1,0 +1,747 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MakeX — Inspire · Explorer · Challenge</title>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{--bg:#060a16;--bg2:#0b1022;--card-bg:rgba(12,18,40,0.75);--red:#ff1744;--red-dim:rgba(255,23,68,0.35);--blue:#2979ff;--blue-dim:rgba(41,121,255,0.35);--cyan:#00e5ff;--cyan-dim:rgba(0,229,255,0.20);--text:#e8eaed;--text-dim:#8e9aaf;--border:rgba(41,121,255,0.20);--font:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,-apple-system,sans-serif;--mono:'Cascadia Code','JetBrains Mono','Fira Code','Consolas',monospace}
+  html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);overflow-x:hidden}
+  body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,0.015) 2px,rgba(0,229,255,0.015) 4px)}
+  .bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;background-image:linear-gradient(rgba(41,121,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(41,121,255,0.04) 1px,transparent 1px);background-size:60px 60px}
+  .bg-grid::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 20% 30%,rgba(41,121,255,0.06),transparent),radial-gradient(ellipse 60% 50% at 80% 70%,rgba(255,23,68,0.05),transparent)}
+  .hex-deco{position:fixed;pointer-events:none;z-index:0}
+  .hex-deco-1{top:8%;left:5%;width:180px;height:200px;background:var(--blue-dim);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);opacity:0.08;animation:floatHex 18s ease-in-out infinite}
+  .hex-deco-2{bottom:12%;right:3%;width:240px;height:260px;background:var(--red-dim);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);opacity:0.06;animation:floatHex 22s ease-in-out infinite reverse}
+  .hex-deco-3{top:50%;left:50%;width:120px;height:140px;background:var(--cyan-dim);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);opacity:0.05;animation:floatHex 14s ease-in-out infinite 4s;transform:translate(-50%,-50%)}
+  @keyframes floatHex{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-30px) rotate(5deg)}}
+  .glow-orb{position:fixed;width:600px;height:600px;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+  .glow-orb-blue{top:-200px;right:-100px;background:rgba(41,121,255,0.08)}
+  .glow-orb-red{bottom:-200px;left:-100px;background:rgba(255,23,68,0.06)}
+  #app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+  .app-header{width:100%;padding:24px 40px 12px;display:flex;align-items:center;justify-content:center;gap:16px;position:relative}
+  .app-header::after{content:'';position:absolute;bottom:0;left:10%;width:80%;height:1px;background:linear-gradient(90deg,transparent,var(--blue),var(--red),transparent)}
+  .logo-mark{font-size:28px;font-weight:800;letter-spacing:3px;text-transform:uppercase;background:linear-gradient(135deg,var(--blue),var(--cyan),var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .logo-sub{font-size:11px;letter-spacing:6px;color:var(--text-dim);text-transform:uppercase;margin-top:2px}
+  .view{display:none;width:100%;max-width:1200px;margin:0 auto;padding:20px 24px 80px}
+  .view.active{display:block}
+
+  /* ===== MAIN CARDS ===== */
+  .card-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:32px}
+  .card-main{position:relative;padding:48px 32px 40px;border-radius:12px;background:var(--card-bg);backdrop-filter:blur(12px);border:1px solid var(--border);cursor:pointer;text-align:center;transition:all 0.35s cubic-bezier(0.22,1,0.36,1);overflow:hidden;min-height:340px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .card-main::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.4s;border-radius:12px}
+  .card-main:hover{transform:translateY(-6px);box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+  .card-main:hover::before{opacity:1}
+  .card-inspire{border-color:rgba(41,121,255,0.35);--accent:var(--blue);--accent-dim:var(--blue-dim)}
+  .card-inspire::before{background:radial-gradient(ellipse at 50% 0%,rgba(41,121,255,0.12),transparent 70%)}
+  .card-inspire:hover{border-color:var(--blue);box-shadow:0 20px 60px rgba(0,0,0,0.5),0 0 40px rgba(41,121,255,0.15)}
+  .card-explorer{border-color:rgba(0,229,255,0.30);--accent:var(--cyan);--accent-dim:var(--cyan-dim)}
+  .card-explorer::before{background:radial-gradient(ellipse at 50% 0%,rgba(0,229,255,0.10),transparent 70%)}
+  .card-explorer:hover{border-color:var(--cyan);box-shadow:0 20px 60px rgba(0,0,0,0.5),0 0 40px rgba(0,229,255,0.12)}
+  .card-challenge{border-color:rgba(255,23,68,0.30);--accent:var(--red);--accent-dim:var(--red-dim)}
+  .card-challenge::before{background:radial-gradient(ellipse at 50% 0%,rgba(255,23,68,0.10),transparent 70%)}.card-explorer2{border-color:rgba(0,188,212,0.30);--accent:#00bcd4;--accent-dim:rgba(0,188,212,0.20)}.card-explorer2::before{background:radial-gradient(ellipse at 50% 0%,rgba(0,188,212,0.10),transparent 70%)}.card-explorer2:hover{border-color:#00bcd4;box-shadow:0 20px 60px rgba(0,0,0,0.5),0 0 40px rgba(0,188,212,0.12)}
+  .card-challenge:hover{border-color:var(--red);box-shadow:0 20px 60px rgba(0,0,0,0.5),0 0 40px rgba(255,23,68,0.12)}
+  .card-main-icon{font-size:52px;margin-bottom:16px;line-height:1;position:relative;z-index:1}
+  .card-main-title{font-size:28px;font-weight:700;letter-spacing:2px;position:relative;z-index:1;text-transform:uppercase;margin-bottom:8px;background:linear-gradient(135deg,var(--accent),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .card-main-desc{font-size:13px;color:var(--text-dim);letter-spacing:1px;position:relative;z-index:1}
+  .card-main-count{margin-top:20px;font-size:12px;color:var(--text-dim);font-family:var(--mono);letter-spacing:2px;position:relative;z-index:1;padding:4px 14px;border:1px solid rgba(255,255,255,0.08);border-radius:4px;display:inline-block}
+
+  /* ===== CATEGORY TABLE ===== */
+  .cat-header{display:flex;align-items:center;gap:16px;padding:12px 0 20px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,0.05);margin-bottom:20px}
+  .btn-back{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:13px;font-family:var(--font);transition:all 0.25s;letter-spacing:0.5px}
+  .btn-back:hover{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.15)}
+  .cat-title{font-size:26px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-left:auto;font-family:var(--mono)}
+  .cat-title.accent-blue{color:var(--blue)}
+  .cat-title.accent-cyan{color:var(--cyan)}
+  .cat-title.accent-red{color:var(--red)}
+  .cat-slot-info{font-size:12px;color:var(--text-dim);font-family:var(--mono);letter-spacing:1px;margin-left:16px}
+  .slot-grid{display:flex;flex-direction:column;gap:6px}
+  .slot-row{display:grid;grid-template-columns:52px 1fr 70px 70px 70px;gap:8px;align-items:center;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);transition:all 0.2s}
+  .slot-row:hover{background:rgba(255,255,255,0.04);border-color:var(--border)}
+  .slot-num{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text-dim);text-align:center;letter-spacing:1px}
+  .slot-input-wrap{position:relative}
+  .slot-input{width:100%;padding:7px 12px;border-radius:4px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.35);color:var(--text);font-size:14px;font-family:var(--font);outline:none;transition:all 0.2s}
+  .slot-input:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(41,121,255,0.15)}
+  .slot-input.saved{border-color:rgba(0,229,255,0.25);background:rgba(0,229,255,0.04)}
+  .slot-input.saved:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(0,229,255,0.12)}
+  .btn-icon{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:6px 12px;border-radius:4px;border:none;cursor:pointer;font-size:12px;font-family:var(--font);transition:all 0.2s;letter-spacing:0.5px;white-space:nowrap}
+  .btn-save{background:rgba(41,121,255,0.12);color:var(--blue);border:1px solid rgba(41,121,255,0.20)}
+  .btn-save:hover{background:rgba(41,121,255,0.20)}
+  .btn-save:active{transform:scale(0.96)}
+  .btn-open{background:rgba(255,255,255,0.04);color:var(--text-dim);border:1px solid rgba(255,255,255,0.08)}
+  .btn-open:hover{background:rgba(255,255,255,0.08);color:var(--text)}
+  .btn-open:active{transform:scale(0.96)}.btn-icon-del{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:6px 8px;border:none;cursor:pointer;font-size:12px;font-family:var(--font);transition:all 0.2s;letter-spacing:0.5px;white-space:nowrap;background:rgba(255,23,68,0.08);color:var(--red);border:1px solid rgba(255,23,68,0.15);border-radius:4px}.btn-icon-del:hover{background:rgba(255,23,68,0.18)}.btn-icon-del:active{transform:scale(0.96)}
+  .btn-open.active{color:var(--text);border-color:rgba(255,255,255,0.15)}
+
+  /* ===== DOCUMENT EDITOR ===== */
+  .doc-header{display:flex;align-items:center;gap:16px;padding:12px 0 20px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,0.05);margin-bottom:24px}
+  .doc-title-group{display:flex;align-items:center;gap:12px;margin-left:auto}
+  .doc-title{font-size:22px;font-weight:700;letter-spacing:2px;font-family:var(--mono)}
+  .doc-badge{font-size:11px;font-family:var(--mono);padding:3px 12px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);letter-spacing:1px}
+  .doc-section{margin-bottom:28px}
+  .doc-section-title{font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:8px}
+  .doc-section-title .icon{font-size:16px}
+  .doc-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  .doc-field{display:flex;flex-direction:column;gap:4px}
+  .doc-field label{font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase}
+  .doc-field input,.doc-field textarea{padding:10px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.30);color:var(--text);font-size:14px;font-family:var(--font);outline:none;transition:all 0.2s;width:100%}
+  .doc-field input:focus,.doc-field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(41,121,255,0.12)}
+  .doc-field textarea{resize:vertical;min-height:120px;line-height:1.6}
+  .doc-field textarea.large{min-height:200px}
+  .doc-actions{display:flex;gap:12px;justify-content:flex-end;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);margin-top:8px}
+  .btn-primary{background:linear-gradient(135deg,var(--blue),rgba(41,121,255,0.6));color:#fff;border:none;padding:10px 28px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font);letter-spacing:1px;transition:all 0.25s}
+  .btn-primary:hover{box-shadow:0 4px 20px rgba(41,121,255,0.30);transform:translateY(-1px)}
+  .btn-primary:active{transform:scale(0.97)}
+  .btn-secondary{background:rgba(255,255,255,0.04);color:var(--text);border:1px solid rgba(255,255,255,0.10);padding:10px 28px;border-radius:6px;cursor:pointer;font-size:13px;font-family:var(--font);letter-spacing:0.5px;transition:all 0.25s}
+  .btn-secondary:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.18)}
+
+  
+  /* ===== SMART PASTE MODAL ===== */
+  .paste-overlay{display:none;position:fixed;inset:0;z-index:10000;background:rgba(2,4,12,0.80);backdrop-filter:blur(8px);justify-content:center;align-items:center}
+  .paste-overlay.open{display:flex}
+  .paste-modal{width:90%;max-width:640px;padding:0;border-radius:12px;background:var(--bg2);border:1px solid var(--border);box-shadow:0 40px 120px rgba(0,0,0,0.6);overflow:hidden;animation:modalIn 0.25s ease-out}
+  .paste-head{padding:18px 24px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between}
+  .paste-head h2{font-size:16px;font-weight:600;letter-spacing:1px;display:flex;align-items:center;gap:8px}
+  .paste-close{width:32px;height:32px;border-radius:4px;border:none;background:transparent;color:var(--text-dim);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+  .paste-close:hover{background:rgba(255,255,255,0.08);color:var(--text)}
+  .paste-body{padding:20px 24px}
+  .paste-hint{font-size:12px;color:var(--text-dim);margin-bottom:12px;line-height:1.6;padding:10px 14px;background:rgba(0,229,255,0.04);border-radius:6px;border:1px solid rgba(0,229,255,0.10)}
+  .paste-hint strong{color:var(--cyan)}
+  .paste-textarea{width:100%;min-height:220px;padding:14px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.30);color:var(--text);font-size:14px;font-family:var(--font);outline:none;transition:all 0.2s;resize:vertical;line-height:1.7}
+  .paste-textarea:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(41,121,255,0.12)}
+  .paste-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+  .doc-editor{width:100%;min-height:120px;padding:10px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.30);color:var(--text);font-size:14px;font-family:var(--font);outline:none;transition:all 0.2s;line-height:1.7;white-space:pre-wrap;word-wrap:break-word;overflow-y:visible}
+  .doc-editor:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(41,121,255,0.12)}
+  .doc-editor:empty::before{content:attr(data-placeholder);color:rgba(255,255,255,0.20);pointer-events:none}
+    .img-toolbar{display:none;position:fixed;z-index:999;padding:4px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;gap:2px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,0.5);pointer-events:auto;white-space:nowrap}
+  .img-toolbar button{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:11px;font-family:var(--mono);transition:all 0.15s;letter-spacing:0.5px}
+  .img-toolbar button:hover{background:rgba(41,121,255,0.20);color:var(--blue);border-color:var(--blue)}
+  .img-toolbar .img-sep{width:1px;height:18px;background:rgba(255,255,255,0.08);margin:0 6px;display:inline-block}
+  .doc-editor img{cursor:pointer}
+  .doc-editor img.selected{box-shadow:0 0 0 2px var(--blue);border-radius:2px}.doc-editor img{max-width:100%;border-radius:4px;margin:4px 0;display:block}::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.10)}
+
+  @media(max-width:860px){
+    .card-grid{grid-template-columns:1fr;gap:16px}
+    .card-main{min-height:200px;padding:32px 24px}
+    .slot-row{grid-template-columns:36px 1fr 50px 50px 50px;gap:6px;padding:6px 10px}
+    .cat-title{font-size:20px}.cat-slot-info{display:none}
+    .app-header{padding:16px 20px 12px}
+    .doc-row-3{grid-template-columns:1fr;gap:12px}
+    .doc-title{font-size:18px}
+  }
+  @media(max-width:480px){
+    .slot-row{grid-template-columns:36px 1fr 48px 48px 48px;gap:4px;padding:5px 8px}
+    .slot-input{font-size:13px;padding:5px 8px}
+    .btn-icon{font-size:11px;padding:4px 8px}
+    .card-main-title{font-size:22px}
+    .view{padding:12px 12px 60px}
+    .doc-actions{flex-direction:column}
+    .doc-actions .btn-primary,.doc-actions .btn-secondary{width:100%;text-align:center}
+  }
+  .fade-in{animation:fadeIn 0.4s ease-out}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.slot-row.dragging{opacity:0.4}.slot-row.drag-over{border-color:var(--blue);background:rgba(41,121,255,0.08)}
+.slot-row.hidden{display:none}
+.toast{position:fixed;bottom:24px;right:24px;z-index:99999;padding:12px 20px;border-radius:8px;background:var(--bg2);border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,0.4);font-size:13px;animation:toastIn 0.3s ease-out;max-width:360px}
+.toast.success{border-color:rgba(0,229,255,0.3)}.toast.error{border-color:rgba(255,23,68,0.3)}
+@keyframes toastIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+.dash-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:24px}
+.dash-card{padding:24px;border-radius:12px;background:var(--card-bg);border:1px solid var(--border)}
+.dash-card-title{font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:16px}
+.dash-stat{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.dash-stat-value{font-size:18px;font-weight:700;font-family:var(--mono)}
+.dash-chart-bar{height:24px;border-radius:4px;background:rgba(255,255,255,0.04);overflow:hidden;margin:4px 0}
+.dash-chart-fill{height:100%;border-radius:4px;transition:width 0.8s ease-out}
+.dash-summary{margin-top:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.dash-summary-item{text-align:center;padding:16px;border-radius:8px;background:rgba(255,255,255,0.02)}
+.dash-summary-item .num{font-size:32px;font-weight:800;font-family:var(--mono)}
+.dash-summary-item .lbl{font-size:11px;color:var(--text-dim);margin-top:4px}
+.save-indicator{position:fixed;bottom:24px;left:24px;z-index:9999;padding:6px 14px;border-radius:6px;background:var(--card-bg);font-size:11px;font-family:var(--mono);color:var(--text-dim);display:flex;align-items:center;gap:6px;pointer-events:none;opacity:0;transition:opacity 0.4s}
+.save-indicator.visible{opacity:1}.save-indicator .dot{width:6px;height:6px;border-radius:50%;background:rgba(0,229,255,0.5);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:0.3}50%{opacity:1}}
+.shortcut-hint{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9998;font-size:10px;font-family:var(--mono);color:var(--text-dim);padding:4px 12px;border-radius:4px;background:rgba(0,0,0,0.3);pointer-events:none;opacity:0;transition:opacity 0.4s;text-align:center}
+.shortcut-hint.visible{opacity:0.6}
+
+.slot-row.dragging{opacity:0.4}.slot-row.drag-over{border-color:var(--blue);background:rgba(41,121,255,0.08)}
+.theme-header{display:flex;align-items:center;gap:10px;padding:10px 14px;margin:14px 0 6px 0;border-radius:8px;background:rgba(41,121,255,0.07);border:1px solid rgba(41,121,255,0.14);border-left:4px solid var(--blue);transition:all 0.2s}
+.theme-header:hover{background:rgba(41,121,255,0.11)}
+.th-text{font-size:15px;font-weight:600;color:var(--blue);letter-spacing:1px;outline:none;flex:1;padding:3px 6px;border-radius:4px}
+.th-text:focus{background:rgba(0,0,0,0.25);color:var(--text)}
+.th-count{font-size:11px;color:var(--text-dim);font-family:var(--mono);letter-spacing:1px;white-space:nowrap}
+.th-add{padding:4px 12px;border-radius:4px;border:1px solid rgba(41,121,255,0.25);background:rgba(41,121,255,0.1);color:var(--blue);cursor:pointer;font-size:11px;font-family:var(--mono);white-space:nowrap;transition:all 0.2s}
+.th-add:hover{background:rgba(41,121,255,0.2)}.th-del{width:26px;height:26px;border:none;border-radius:4px;background:rgba(255,23,68,0.08);color:var(--red);cursor:pointer;font-size:16px;transition:all 0.2s;flex-shrink:0}
+.th-del:hover{background:rgba(255,23,68,0.2)}
+.th-del:active{transform:scale(0.92)}.th-handle{color:rgba(41,121,255,0.3);cursor:grab;font-size:14px;flex-shrink:0;user-select:none}
+.th-handle:active{cursor:grabbing}
+.theme-header.dragging{opacity:0.5;border-style:dashed}
+.theme-header.drag-over{border-color:var(--cyan);background:rgba(0,229,255,0.12)}
+.slot-insert-row.drag-over{background:rgba(0,229,255,0.15);border-radius:6px;box-shadow:0 0 0 1px rgba(0,229,255,0.4)}.slot-insert{display:block;width:28px;height:20px;margin:2px auto;border:none;border-radius:4px;background:rgba(41,121,255,0.05);color:rgba(41,121,255,0.4);cursor:pointer;font-size:13px;transition:all 0.2s}
+.slot-insert-row{display:flex;justify-content:center;gap:4px;margin:2px 0;min-height:28px;align-items:center}
+.slot-insert{display:inline-flex;align-items:center;justify-content:center;width:28px;height:20px;border:none;border-radius:4px;background:rgba(41,121,255,0.05);color:rgba(41,121,255,0.4);cursor:pointer;font-size:13px;transition:all 0.2s;padding:0}
+.slot-insert:hover{background:rgba(41,121,255,0.15);color:var(--blue)}
+.slot-insert-theme{background:rgba(0,229,255,0.05);color:rgba(0,229,255,0.45);font-size:11px}
+.slot-insert-theme:hover{background:rgba(0,229,255,0.15);color:var(--cyan)}</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="hex-deco hex-deco-1"></div>
+<div class="hex-deco hex-deco-2"></div>
+<div class="hex-deco hex-deco-3"></div>
+<div class="glow-orb glow-orb-blue"></div>
+<div class="glow-orb glow-orb-red"></div>
+
+<div id="app">
+
+  <header class="app-header">
+    <div style="text-align:center">
+      <div class="logo-mark">MakeX</div>
+            
+      <button id="btn-dash" onclick="openDashboard()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">📊 统计</button>
+      <button id="btn-print" onclick="printView()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">🖨️ 打印</button>
+      <button id="btn-theme" onclick="toggleTheme()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">🌓</button>
+      <button id="btn-lang" onclick="toggleLang()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;font-size:11px;font-family:var(--mono);cursor:pointer">中文</button>
+<span id="ws-status" style="position:absolute;right:40px;top:24px;font-size:11px;font-family:var(--mono);color:var(--text-dim);letter-spacing:1px">○ 离线</span>
+<div class="logo-sub">Creative · Explore · Conquer</div>
+      <span id="ws-status" style="position:absolute;right:40px;top:24px;font-size:11px;font-family:var(--mono);color:var(--text-dim);letter-spacing:1px">○ 离线</span>
+    </div>
+  </header>
+
+  <!-- ===== VIEW: MAIN ===== -->
+  <div id="view-main" class="view active">
+    <p style="text-align:center;font-size:13px;color:var(--text-dim);letter-spacing:2px;margin-top:12px">选择一个模块开始你的旅程</p>
+    <div class="card-grid fade-in">
+      <div class="card-main card-inspire" onclick="openCategory('inspire')">
+        <div class="card-main-icon">🚀</div>
+        <div class="card-main-title">Inspire</div>
+        <div class="card-main-desc">灵感 · 启蒙 · 创造的火花</div>
+        <div class="card-main-count"><span id="count-inspire">0</span> / <span id="total-inspire">48</span></div>
+      </div>
+      <div class="card-main card-explorer" onclick="openCategory('explorer')">
+        <div class="card-main-icon">🔭</div>
+        <div class="card-main-title">Explorer 第一年</div>
+        <div class="card-main-desc">探索 · 基础 · 入门实践</div>
+        <div class="card-main-count"><span id="count-explorer">0</span> / <span id="total-explorer">48</span></div>
+      </div>
+            <div class="card-main card-explorer2" onclick="openCategory('explorer2')">
+        <div class="card-main-icon">🧪</div>
+        <div class="card-main-title">Explorer 第二年</div>
+        <div class="card-main-desc">探索 · 进阶 · 深入实践</div>
+        <div class="card-main-count"><span id="count-explorer2">0</span> / <span id="total-explorer2">48</span></div>
+      </div>
+<div class="card-main card-challenge" onclick="openCategory('challenge')">
+        <div class="card-main-icon">⚡</div>
+        <div class="card-main-title">Challenge</div>
+        <div class="card-main-desc">挑战 · 突破 · 极限的超越</div>
+        <div class="card-main-count"><span id="count-challenge">0</span> / <span id="total-challenge">48</span></div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:48px">
+      <div style="display:inline-block;padding:8px 20px;border:1px solid rgba(255,255,255,0.04);border-radius:6px;font-size:11px;color:var(--text-dim);letter-spacing:1px;font-family:var(--mono)">
+        ◆ 共 <span id="total-saved">0</span> 个课程已保存
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== VIEW: CATEGORY ===== -->
+  <div id="view-category" class="view">
+    <div class="cat-header">
+      <button class="btn-back" onclick="goHome()">← <span data-i18n="back">返回</span></button><input type="text" id="search-input" placeholder="搜索课程..." oninput="filterSlots()" style="padding:7px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.3);color:var(--text);font-size:13px;outline:none;width:200px">
+      <div class="cat-title" id="cat-title">INSPIRE</div>
+      <span class="cat-slot-info">课程列表</span>
+    </div>
+    <div id="slot-container" class="slot-grid"></div>
+  </div>
+
+  <!-- ===== VIEW: DOCUMENT EDITOR ===== -->
+  <div id="view-document" class="view">
+    <div class="doc-header">
+      <button class="btn-back" onclick="closeDocument()">← <span data-i18n="back">返回课程列表</span></button>
+      <div class="doc-title-group">
+        <span class="doc-badge" id="doc-badge">INSPIRE · 01</span>
+        <span class="doc-title" id="doc-title-display">课程文档</span>
+      </div>
+    </div>
+
+    <!-- Part 1: Three-block header -->
+    <div class="doc-section">
+      <div class="doc-section-title"><span class="icon">📋</span> 课程信息</div>
+      <div class="doc-row-3">
+        <div class="doc-field">
+          <label>课程名称</label>
+          <input type="text" id="doc-name" placeholder="输入课程名称">
+        </div>
+        <div class="doc-field">
+          <label>课程副标题</label>
+          <input type="text" id="doc-subtitle" placeholder="输入副标题">
+        </div>
+        <div class="doc-field">
+          <label>课程使用器材</label>
+          <input type="text" id="doc-equipment" placeholder="例如: MakeX 机器人套件">
+        </div>
+      </div>
+    </div>
+
+    <!-- Part 2: Objectives -->
+    <div class="doc-section">
+      <div class="doc-section-title"><span class="icon">🎯</span> 课程目标</div>
+      <div class="doc-field">
+        <div id="doc-objectives" class="doc-editor" contenteditable="true" data-placeholder="描述本课程的学习目标..."></div>
+      </div>
+    </div>
+
+    <!-- Part 3: Procedure -->
+    <div class="doc-section">
+      <div class="doc-section-title"><span class="icon">📝</span> 课程基本流程</div>
+      <div class="doc-field">
+        <div id="doc-procedure" class="doc-editor" contenteditable="true" data-placeholder="分步骤描述课程流程..." style="min-height:200px"></div>
+      </div>
+    </div>
+
+    <div id="img-toolbar" class="img-toolbar">
+        <button onclick="imgSize(25)">25%</button>
+        <button onclick="imgSize(50)">50%</button>
+        <button onclick="imgSize(75)">75%</button>
+        <button onclick="imgSize(100)">100%</button>
+        <span class="img-sep"></span>
+        <button onclick="imgAlign(&apos;left&apos;)" title="左对齐">L</button>
+        <button onclick="imgAlign(&apos;center&apos;)" title="居中">C</button>
+        <button onclick="imgAlign(&apos;right&apos;)" title="右对齐">R</button>
+        <span class="img-sep"></span>
+        <button onclick="imgDelete()" title="删除">🗑️</button>
+      </div>
+
+    <div class="doc-actions">
+      <button class="btn-secondary" onclick="closeDocument()">取消</button>
+      <button class="btn-secondary" onclick="openSmartPaste()">📋 智能粘贴</button>
+      <button class="btn-secondary" onclick="saveDocumentData();alert('数据已保存')">💾 保存数据</button>
+      <button class="btn-secondary" onclick="generateImage()">🖼️ 生成图片</button>
+      <button class="btn-primary" onclick="downloadDocument()">📥 保存并下载文档</button>
+    </div>
+  </div>
+
+  <!-- ===== SMART PASTE MODAL ===== -->
+  <div class="paste-overlay" id="paste-overlay" onclick="closeSmartPaste(event)">
+    <div class="paste-modal" onclick="event.stopPropagation()">
+      <div class="paste-head">
+        <h2>📋 智能粘贴</h2>
+        <button class="paste-close" onclick="closeSmartPaste()">✕</button>
+      </div>
+      <div class="paste-body">
+        <div class="paste-hint">
+          <strong>粘贴课程内容</strong>，系统将自动识别并填入对应区域。<br>
+          支持格式：<strong>课程关键内容</strong> / <strong>课程目标</strong> / <strong>课程需要器材/设备/资料</strong> / <strong>课程基本流程</strong>
+        </div>
+        <textarea class="paste-textarea" id="paste-textarea" placeholder="在此粘贴课程内容...&#10;&#10;例如:&#10;课程关键内容&#9;&quot;Onshape 的学习及激光雕刻机的使用2&#10;Onshape 复杂草图绘制与尺寸优化&quot;&#10;&#10;课程目标&#9;&quot;1、使用镜像，构造线等命令&#10;2、独立完成 Onshape 草图的合规性检查&quot;&#10;&#10;课程基本流程&#9;&quot;1、Solidworks操作标准化&#10;2、球Intake结构搭建测试&quot;"></textarea>
+        <div class="paste-actions">
+          <button class="btn-secondary" onclick="closeSmartPaste()">取消</button>
+          <button class="btn-primary" onclick="doSmartPaste()">🔄 解析并填充</button>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+<script>
+var STORAGE_KEY = 'makex_data';
+var APP_VERSION = 'v1.0.2';
+var CHANGE_LOG = [
+  {v:'v1.0.2',d:'2026.06.12',m:['优化生成图片高度，内容不再被截断','删除按钮仅显示在新增课程（49+）','版本号提示功能']},
+  {v:'v1.0.1',d:'2026.06.11',m:['添加"+ 添加课程"按钮，支持无限课程数量','删除按钮（仅新增课程可用）']},
+  {v:'v1.0.0',d:'2026.06.11',m:['初始版本：3 级别 × 48 课程','课程编辑、文档生成、智能粘贴']}
+];
+function showChangelog(){
+var t='📋 MakeX 更新日志\n================================\n当前版本: '+APP_VERSION+'\n\n';
+for(var i=0;i<CHANGE_LOG.length;i++){var c=CHANGE_LOG[i];
+t+=c.v+' ('+c.d+')\n';
+for(var j=0;j<c.m.length;j++)t+='  • '+c.m[j]+'\n';t+='\n'}
+alert(t);
+}
+var syncTimer = null;
+var lastSyncData = null;
+var syncConnected = false;
+function pollData(){
+fetch('/data.json').then(function(r){
+if(!r.ok)throw Error();
+return r.json();
+}).then(function(d){
+syncConnected = true;
+var el = document.getElementById('ws-status');
+if(el)el.textContent = '● 在线';
+var key = JSON.stringify(d);
+if(key !== lastSyncData){
+lastSyncData = key;
+var oldCat = currentCategory;
+data = d;
+if(!data||!data.inspire)data = loadData();
+localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+updateCounts();
+var vc = document.getElementById('view-category');
+if(vc.classList.contains('active') && oldCat) renderCategory(oldCat);
+}
+}).catch(function(){
+syncConnected = false;
+var el = document.getElementById('ws-status');
+if(el)el.textContent = '○ 离线';
+});
+}
+var data = loadData();
+pollData();
+syncTimer = setInterval(pollData, 3000);
+var currentCategory = 'inspire';
+var dragMode = '';
+var docContext = null;
+var CATS = {inspire:{label:'Inspire',accent:'accent-blue',color:'#2979ff'},explorer:{label:'Explorer 第一年',accent:'accent-cyan',color:'#00e5ff'},explorer2:{label:'Explorer 第二年',icon:'🧪',accent:'accent-cyan',color:'#00bcd4'},challenge:{label:'Challenge',accent:'accent-red',color:'#ff1744'}};
+
+function emptySlot(){return{name:'',subtitle:'',equipment:'',objectives:'',procedure:'',theme:''}}
+
+function emptySlotNamed(n){var s=emptySlot();s.name=n;return s}
+function themeArr(a){for(var i=0;i<a.length;i++){a[i].theme='主题'+(Math.floor(i/4)+1)}return a}
+function defaultData(){var ex=[emptySlotNamed("Onshape 的学习及激光雕刻机的使用1"),emptySlotNamed("Onshape 的学习及激光雕刻机的使用2"),emptySlotNamed("Onshape 的学习及激光雕刻机的使用3"),emptySlotNamed("基于Onshape与激光雕刻机的螺丝量规制作"),emptySlotNamed("基于Onshape与激光雕刻机的齿轮的制作"),emptySlotNamed("认识电子元件与电路基础"),emptySlotNamed("搭建简单电路与LED控制（手电筒）")];return{inspire:[],explorer:themeArr(ex),explorer2:[],challenge:[]}}
+
+function loadData(){try{var r=localStorage.getItem("makex_data")||localStorage.getItem("makex_courses");if(r){var p=JSON.parse(r);var keys=['inspire','explorer','explorer2','challenge'];for(var k=0;k<keys.length;k++){var key=keys[k];if(!Array.isArray(p[key]))p[key]=[];for(var i=0;i<p[key].length;i++){if(typeof p[key][i]==='string'){p[key][i]={name:p[key][i],subtitle:'',equipment:'',objectives:'',procedure:'',theme:''}}}}for(var k=0;k<keys.length;k++){var key=keys[k];p[key]=(p[key]||[]).filter(function(s){return s&&((s.name&&s.name.trim())||(s.subtitle&&s.subtitle.trim())||(s.equipment&&s.equipment.trim())||(s.objectives&&s.objectives.trim())||(s.procedure&&s.procedure.trim()))})}
+if(p&&Array.isArray(p.explorer)){var _hasEx=false;for(var _i=0;_i<p.explorer.length;_i++){if(p.explorer[_i]&&p.explorer[_i].name&&p.explorer[_i].name.trim()){_hasEx=true;break}}if(!_hasEx){var _seed=["Onshape 的学习及激光雕刻机的使用1","Onshape 的学习及激光雕刻机的使用2","Onshape 的学习及激光雕刻机的使用3","基于Onshape与激光雕刻机的螺丝量规制作","基于Onshape与激光雕刻机的齿轮的制作","认识电子元件与电路基础","搭建简单电路与LED控制（手电筒）"];for(var _j=0;_j<_seed.length;_j++){p.explorer.push(emptySlotNamed(_seed[_j]))}}}for(var _ki=0;_ki<keys.length;_ki++){var _k2=keys[_ki];if(Array.isArray(p[_k2])){for(var _si=0;_si<p[_k2].length;_si++){if(p[_k2][_si]&&typeof p[_k2][_si]==='object'&&!p[_k2][_si].theme){p[_k2][_si].theme='主题'+(Math.floor(_si/4)+1)}}}}
+return p}}catch(e){}return defaultData()}
+
+function saveData(){localStorage.setItem("makex_data",JSON.stringify(data));localStorage.setItem("makex_courses",JSON.stringify(data));updateCounts()}
+
+function addSlot(cat){
+var arr=data[cat];
+var newSlot=emptySlot();
+newSlot.name='新课程 '+(arr.length+1);
+arr.push(newSlot);
+saveData();
+renderCategory(cat);
+}
+
+function deleteTheme(cat,themeName){var arr=data[cat];var themes=[];for(var i=0;i<arr.length;i++){var t=arr[i].theme;if(t&&themes.indexOf(t)===-1)themes.push(t)}var pos=themes.indexOf(themeName);var target;if(pos>0){target=themes[pos-1]}else if(themes.length>1){target=themes[1]}else{target="主题1"}for(var i=0;i<arr.length;i++){if(arr[i].theme===themeName)arr[i].theme=target}normalizeThemes(cat);saveData();renderCategory(cat);showToast("主题已删除，课程已移入上一主题")}
+function normalizeThemes(cat){var arr=data[cat];var order=[];for(var i=0;i<arr.length;i++){var t=arr[i].theme||"未分组";if(order.indexOf(t)===-1)order.push(t)}var out=[];for(var o=0;o<order.length;o++){for(var i=0;i<arr.length;i++){if((arr[i].theme||"未分组")===order[o])out.push(arr[i])}}data[cat]=out;return out}
+function moveTheme(cat,themeName,targetObj,before){var arr=data[cat];var removed=[];var kept=[];for(var i=0;i<arr.length;i++){if(arr[i].theme===themeName)removed.push(arr[i]);else kept.push(arr[i])}var ti=kept.indexOf(targetObj);if(ti<0)ti=kept.length;if(!before)ti++;var args=[ti,0].concat(removed);kept.splice.apply(kept,args);data[cat]=kept;normalizeThemes(cat);saveData();renderCategory(cat);showToast("主题已移动")}
+function addCourseToTheme(cat,themeName){var arr=data[cat];var lastIdx=-1;for(var i=0;i<arr.length;i++){if(arr[i].theme===themeName)lastIdx=i}var ns=emptySlot();ns.theme=themeName;ns.name='新课程 '+(arr.length+1);if(lastIdx>=0)arr.splice(lastIdx+1,0,ns);else arr.push(ns);saveData();renderCategory(cat)}
+function pad(n){return n<10?'0'+n:''+n}
+
+function updateCounts(){var cats=['inspire','explorer','explorer2','challenge'];for(var c=0;c<cats.length;c++){var cat=cats[c];var n=0;for(var i=0;i<data[cat].length;i++){var s=data[cat][i];if(s.name&&s.name.trim()!=='')n++}var el=document.getElementById('count-'+cat);if(el)el.textContent=n}
+var cats2=["inspire","explorer","explorer2","challenge"];for(var c2=0;c2<cats2.length;c2++){var el2=document.getElementById("total-"+cats2[c2]);if(el2)el2.textContent=data[cats2[c2]].length}
+var t=0;for(var c=0;c<cats.length;c++){for(var i=0;i<data[cats[c]].length;i++){if(data[cats[c]][i].name&&data[cats[c]][i].name.trim())t++}}var el=document.getElementById('total-saved');if(el)el.textContent=t}
+
+function openCategory(cat){currentCategory=cat;document.getElementById('view-main').classList.remove('active');document.getElementById('view-category').classList.add('active');renderCategory(cat)}
+function goHome(){document.getElementById('view-category').classList.remove('active');document.getElementById('view-main').classList.add('active')}
+
+function renderCategory(cat){var info=CATS[cat];document.getElementById('cat-title').textContent=info.label;document.getElementById('cat-title').className='cat-title '+info.accent;var container=document.getElementById('slot-container');container.innerHTML='';var arr=data[cat];arr=normalizeThemes(cat)
+var lastTheme='';for(var i=0;i<arr.length;i++){let idx=i;var num=pad(i+1);var slot=arr[i]||emptySlot();var val=slot.name||'';let st=slot.theme||('主题'+(Math.floor(idx/4)+1));if(!slot.theme){slot.theme=st}if(st!==lastTheme){var th=document.createElement('div');th.className='theme-header';th.draggable=true;th.dataset.theme=st;th.addEventListener('dragstart',function(e){dragMode='theme';e.dataTransfer.setData('text/plain',this.dataset.theme);this.classList.add('dragging')});th.addEventListener('dragend',function(){dragMode='';this.classList.remove('dragging');document.querySelectorAll('.theme-header.drag-over').forEach(function(e){e.classList.remove('drag-over')})});th.addEventListener('dragover',function(e){e.preventDefault();document.querySelectorAll('.theme-header.drag-over').forEach(function(e2){if(e2!==this)e2.classList.remove('drag-over')});this.classList.add('drag-over')});th.addEventListener('drop',function(e){e.preventDefault();this.classList.remove('drag-over');if(dragMode==='theme'){var tn=e.dataTransfer.getData('text/plain');if(tn&&tn!==this.dataset.theme){var k=currentCategory||'inspire';var arr=data[k];var firstIdx=-1;for(var i=0;i<arr.length;i++){if(arr[i].theme===this.dataset.theme){firstIdx=i;break}}if(firstIdx>=0)moveTheme(k,tn,arr[firstIdx],true)}}else if(dragMode==='course'){}});var thHandle=document.createElement('span');thHandle.className='th-handle';thHandle.textContent='⠿';var thText=document.createElement('span');thText.className='th-text';thText.textContent=st;thText.contentEditable=true;thText.addEventListener('blur',function(){var t=this.textContent.trim()||'未命名主题';for(var q=0;q<arr.length;q++){if(arr[q].theme===st)arr[q].theme=t}saveData();renderCategory(cat);showToast('主题已保存')});thText.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();this.blur()}});thText.addEventListener('compositionend',function(){this.blur()});var cnt=0;for(var q=0;q<arr.length;q++){if(arr[q].theme===st)cnt++}var thCount=document.createElement('span');thCount.className='th-count';thCount.textContent=cnt+' 节课';var thAdd=document.createElement('button');thAdd.className='th-add';thAdd.textContent='+ 添加课程';thAdd.onclick=function(tn){return function(){addCourseToTheme(cat,tn)}}(st);var thDel=document.createElement("button");thDel.className="th-del";thDel.textContent="×";thDel.title="删除该主题";thDel.onclick=function(tn){return function(){if(confirm("删除主题「"+tn+"」及其中的所有课程？")){deleteTheme(cat,tn)}}}(st);th.appendChild(thHandle);th.appendChild(thText);th.appendChild(thCount);th.appendChild(thDel);th.appendChild(thAdd);container.appendChild(th);lastTheme=st}var row=document.createElement('div');row.className='slot-row';row.draggable=true;row.dataset.index=idx
+var numEl=document.createElement('div');numEl.className='slot-num';numEl.textContent=num;row.appendChild(numEl)
+var wrap=document.createElement('div');wrap.className='slot-input-wrap';var input=document.createElement('input');input.type='text';input.className='slot-input'+(val?' saved':'');input.placeholder='输入课程名称...';input.value=val;input.dataset.index=idx
+input.addEventListener('input',function(){var idx=parseInt(this.dataset.index);arr[idx].name=this.value;saveData();if(this.value.trim()){this.classList.add('saved')}else{this.classList.remove('saved')}
+var rowEl=this.closest('.slot-row');var openBtn=rowEl.querySelector('.btn-open');if(this.value.trim()){openBtn.classList.add('active')}else{openBtn.classList.remove('active')}})
+wrap.appendChild(input);row.appendChild(wrap)
+var saveBtn=document.createElement('button');saveBtn.className='btn-icon btn-save';saveBtn.textContent='保存'
+saveBtn.addEventListener('click',function(){var v=input.value.trim();if(!v){this.textContent='空';var self=this;setTimeout(function(){self.textContent='保存'},800);return}
+saveSlotFile(cat,idx,v);this.textContent='已存';var self=this;setTimeout(function(){self.textContent='保存'},1200)})
+row.appendChild(saveBtn)
+var openBtn=document.createElement('button');openBtn.className='btn-icon btn-open active';openBtn.textContent='打开'
+openBtn.addEventListener('click',function(){openDocument(cat,idx)})
+row.appendChild(openBtn);if(true){var delBtn=document.createElement("button");delBtn.className="btn-icon btn-icon-del";delBtn.textContent="删除";delBtn.onclick=function(){if(confirm("确定要删除「"+arr[idx].name+"」吗？")){data[cat].splice(idx,1);saveData();renderCategory(cat)}};row.appendChild(delBtn)}row.addEventListener("dragstart",function(e){this.classList.add("dragging");e.dataTransfer.setData("text/plain",this.dataset.index)});row.addEventListener("dragend",function(){this.classList.remove("dragging");document.querySelectorAll(".slot-row.drag-over").forEach(function(e){e.classList.remove("drag-over")})});row.addEventListener("dragover",function(e){e.preventDefault();this.classList.add("drag-over")});row.addEventListener("drop",function(e){e.preventDefault();this.classList.remove("drag-over");var k=currentCategory||"inspire";var t=parseInt(this.dataset.index);if(dragMode==='theme'){var tn=e.dataTransfer.getData('text/plain');if(tn){var arr=data[k];if(arr[t])moveTheme(k,tn,arr[t],false)}return}var f=parseInt(e.dataTransfer.getData("text/plain"));if(f===t)return;var item=data[k].splice(f,1)[0];if(f<t)t--;var targetTheme=(data[k][t]&&data[k][t].theme)||"未分组";item.theme=targetTheme;data[k].splice(t,0,item);normalizeThemes(k);saveData();renderCategory(k);showToast("已排序")});container.appendChild(row);var insRow=document.createElement('div');insRow.className='slot-insert-row';insRow.addEventListener('dragover',function(e){e.preventDefault();this.classList.add('drag-over')});insRow.addEventListener('dragleave',function(){this.classList.remove('drag-over')});insRow.addEventListener('drop',function(e){e.preventDefault();this.classList.remove('drag-over');var k=currentCategory||'inspire';if(dragMode==='theme'){var tn=e.dataTransfer.getData('text/plain');if(tn){var arr=data[k];if(arr[idx])moveTheme(k,tn,arr[idx],false)}}else if(dragMode==='course'){var f=parseInt(e.dataTransfer.getData('text/plain'));var t=idx+1;if(f===t)return;var item=data[k].splice(f,1)[0];if(f<t)t--;var targetTheme=(data[k][t]&&data[k][t].theme)||'未分组';item.theme=targetTheme;data[k].splice(t,0,item);normalizeThemes(k);saveData();renderCategory(k);showToast('已排序')}});var insBtn=document.createElement('button');insBtn.className='slot-insert';insBtn.textContent='+';insBtn.title='在此处添加课程';insBtn.onclick=function(){var ns=emptySlot();ns.theme=(arr[idx]&&arr[idx].theme)||'未分组';ns.name='新课程 '+(arr.length+1);arr.splice(idx+1,0,ns);saveData();renderCategory(cat)};var insTheme=document.createElement('button');insTheme.className='slot-insert slot-insert-theme';insTheme.textContent='▸';insTheme.title='在此处添加新主题';insTheme.onclick=function(){var name=prompt('输入新主题名称：','主题'+(Math.floor(arr.length/4)+1));if(name&&name.trim()){var ns=emptySlot();ns.theme=name.trim();ns.name='新课程 '+(arr.length+1);arr.splice(idx+1,0,ns);saveData();renderCategory(cat)}};insRow.appendChild(insBtn);insRow.appendChild(insTheme);container.appendChild(insRow)}
+var rows=container.querySelectorAll('.slot-row');for(var i=0;i<rows.length;i++){(function(el,idx){el.style.opacity='0';el.style.transform='translateY(8px)';setTimeout(function(){el.style.transition='all 0.3s ease-out';el.style.opacity='1';el.style.transform='translateY(0)'},idx*20)})(rows[i],i)}
+
+var addBtn=document.createElement('div');addBtn.style.cssText='padding:12px 16px;margin-top:8px;border-radius:8px;border:2px dashed rgba(41,121,255,0.25);background:rgba(41,121,255,0.04);cursor:pointer;text-align:center;transition:all 0.25s;font-size:14px;color:#2979ff;letter-spacing:1px';addBtn.textContent='+ 添加课程';addBtn.onmouseover=function(){this.style.borderColor='rgba(41,121,255,0.5)';this.style.background='rgba(41,121,255,0.08)'};addBtn.onmouseout=function(){this.style.borderColor='rgba(41,121,255,0.25)';this.style.background='rgba(41,121,255,0.04)'};addBtn.onclick=function(){addSlot(cat)};container.appendChild(addBtn);var addThemeBtn=document.createElement('div');addThemeBtn.style.cssText='padding:10px 16px;margin-top:6px;border-radius:8px;border:2px dashed rgba(0,229,255,0.2);background:rgba(0,229,255,0.03);cursor:pointer;text-align:center;transition:all 0.25s;font-size:13px;color:var(--cyan);letter-spacing:0.5px';addThemeBtn.textContent='+ 添加主题';addThemeBtn.onmouseover=function(){this.style.borderColor='rgba(0,229,255,0.4)';this.style.background='rgba(0,229,255,0.06)'};addThemeBtn.onmouseout=function(){this.style.borderColor='rgba(0,229,255,0.2)';this.style.background='rgba(0,229,255,0.03)'};addThemeBtn.onclick=function(){var name=prompt('输入新主题名称：','主题'+(Math.floor(arr.length/4)+1));if(name&&name.trim()){var ns=emptySlot();ns.theme=name.trim();ns.name='新课程 '+(arr.length+1);arr.push(ns);saveData();renderCategory(cat)}};container.appendChild(addThemeBtn)}
+
+
+/* ===== GENERATE IMAGE ===== */
+function generateImage(){
+if(!docContext){alert('请先打开一个文档');return}
+saveDocumentData()
+var slot=data[docContext.cat][docContext.index];var info=CATS[docContext.cat];var sn=pad(docContext.index+1)
+var name=slot.name||'(未命名)';var subtitle=slot.subtitle||'';var eq=slot.equipment||''
+var obj=(document.getElementById('doc-objectives').textContent||'').trim()
+var pro=(document.getElementById('doc-procedure').textContent||'').trim()
+var W=800;var p=36;var cw=W-p*2;var lh=24;var catColor=info.color
+
+function wrapH(text,maxW,font,lh2){
+var lines=text.split('\n');var total=0
+for(var l=0;l<lines.length;l++){var line=lines[l];if(!line.trim()){total+=lh2*0.3;continue}
+var cur='';for(var c=0;c<line.length;c++){var test=cur+line[c]
+if(font.measureText(test).width>maxW&&cur){total+=lh2;cur=line[c]}else{cur=test}}
+if(cur)total+=lh2}
+return total}
+
+var tmpC=document.createElement('canvas');var tctx=tmpC.getContext('2d')
+tctx.font='14px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+var fw=cw-24-24
+function fh(v,mw){return 14+Math.max(wrapH(v||'(未填写)',mw,tctx,lh),lh)}
+var hh=82
+var infoH=20+fh(name,fw)+fh(subtitle,fw)+fh(eq,fw)+8
+var objH=20+Math.max(wrapH(obj||'(未填写)',fw,tctx,lh),lh)+8
+var proH=20+Math.max(wrapH(pro||'(未填写)',fw,tctx,lh),lh)
+var minFooterY=Math.max(200,82+hh+infoH+objH+proH+80);var H=8000;
+
+var cv=document.createElement('canvas');cv.width=W;cv.height=H;var cx=cv.getContext('2d')
+
+// Background
+var bg=cx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#060a16');bg.addColorStop(0.5,'#0c1428');bg.addColorStop(1,'#060a16')
+cx.fillStyle=bg;cx.fillRect(0,0,W,H)
+
+// Grid
+cx.strokeStyle='rgba(41,121,255,0.025)';cx.lineWidth=1
+for(var x=0;x<W;x+=40){cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke()}
+for(var y=0;y<H;y+=40){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke()}
+
+// Top glow
+var tg=cx.createRadialGradient(W/2,-80,0,W/2,-80,300);tg.addColorStop(0,catColor+'15');tg.addColorStop(1,'transparent')
+cx.fillStyle=tg;cx.fillRect(0,-200,W,400)
+
+// Card
+var cx0=p-6;var cy0=60;var cw0=W-(p-6)*2;var ch0=H-cy0-p+6
+function rrc(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.lineTo(x+w-r,y);cx.quadraticCurveTo(x+w,y,x+w,y+r)
+cx.lineTo(x+w,y+h-r);cx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);cx.lineTo(x+r,y+h)
+cx.quadraticCurveTo(x,y+h,x,y+h-r);cx.lineTo(x,y+r);cx.quadraticCurveTo(x,y,x+r,y);cx.closePath()}
+rrc(cx0,cy0,cw0,ch0,16)
+cx.fillStyle='rgba(10,14,30,0.88)';cx.fill()
+cx.strokeStyle='rgba(41,121,255,0.08)';cx.lineWidth=1;cx.stroke()
+
+// Top accent bar
+var bg2=cx.createLinearGradient(cx0+1,0,cx0+cw0-1,0)
+bg2.addColorStop(0,catColor);bg2.addColorStop(0.15,catColor+'aa');bg2.addColorStop(1,'rgba(41,121,255,0.03)')
+rrc(cx0+1,cy0+1,cw0-2,4,[0,0,4,4]);cx.fillStyle=bg2;cx.fill()
+
+var y=cy0+22
+var x=cx0+24
+
+// Section helper
+function secTitle(label,x2,y2,color){
+cx.font='bold 15px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+cx.fillStyle=color;cx.fillText(label,x2,y2)
+// underline
+cx.strokeStyle=color+'44';cx.lineWidth=2;cx.beginPath();cx.moveTo(x2,y2+4);cx.lineTo(x2+150,y2+4);cx.stroke()
+return y2+18}
+
+function drawText(text,x2,y2,maxW,color,size){
+cx.font=size+'px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';cx.fillStyle=color
+var lines=text.split('\n');var cy=y2
+for(var l=0;l<lines.length;l++){var line=lines[l];if(!line.trim()){cy+=lh*0.3;continue}
+var cur='';for(var c=0;c<line.length;c++){var test=cur+line[c]
+if(cx.measureText(test).width>maxW&&cur){cx.fillText(cur,x2,cy);cy+=lh;cur=line[c]}else{cur=test}}
+if(cur){cx.fillText(cur,x2,cy);cy+=lh}}
+return cy}
+
+function secLabel(label,x2,y2,color){
+// colored left bar
+cx.fillStyle=color;cx.fillRect(x2-8,y2-10,3,18)
+cx.font='bold 14px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+cx.fillStyle=color;cx.fillText(label,x2,y2+2)
+return y2+20}
+
+function drawField(label,value,x2,y2,mw,color){
+cx.font='12px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+cx.fillStyle='#7a8aa0';cx.fillText(label,x2,y2-2)
+cx.font='14px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+cx.fillStyle=color||'#e0e4ea'
+var lines=value.split('\n');var cy=y2+18
+for(var l=0;l<lines.length;l++){var line=lines[l];if(!line.trim()){cy+=lh*0.3;continue}
+var cur='';for(var c=0;c<line.length;c++){var test=cur+line[c]
+if(cx.measureText(test).width>mw&&cur){cx.fillText(cur,x2,cy);cy+=lh;cur=line[c]}else{cur=test}}
+if(cur){cx.fillText(cur,x2,cy);cy+=lh}}
+return cy}
+
+// ===== Draw content =====
+var ypos=y
+
+// MakeX header
+cx.font='bold 13px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+cx.fillStyle='#556688';cx.fillText('MAKX',x,ypos);ypos+=4
+cx.font='24px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+var tg2=cx.createLinearGradient(x,0,x+300,0);tg2.addColorStop(0,catColor);tg2.addColorStop(0.5,catColor+'aa');tg2.addColorStop(1,'#e0e4ea')
+cx.fillStyle=tg2;cx.fillText(name,x,ypos+30);ypos+=40
+
+// Category badge
+cx.font='11px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+cx.fillStyle=catColor+'88'
+var badge=info.label+' · Slot '+sn
+cx.fillText(badge,x,ypos+4);ypos+=10
+
+// Divider
+cx.strokeStyle='rgba(41,121,255,0.08)';cx.lineWidth=1;cx.setLineDash([3,4])
+cx.beginPath();cx.moveTo(x,ypos+12);cx.lineTo(x+cw-48,ypos+12);cx.stroke();cx.setLineDash([])
+ypos+=28
+
+// Section 1: 课程信息
+ypos=secLabel('课程信息',x,ypos,catColor)
+ypos=drawField('课程名称',name,x,ypos,cw-24-24,catColor)
+ypos=drawField('课程副标题',subtitle||'(未填写)',x,ypos,cw-24-24,'#c0c8d4')
+ypos=drawField('课程使用器材',eq||'(未填写)',x,ypos,cw-24-24,'#c0c8d4')
+ypos+=8
+
+// Section 2: 课程目标
+ypos=secLabel('课程目标',x,ypos,catColor)
+ypos=drawText(obj||'(未填写)',x,ypos,cw-24-24,'#e0e4ea',14)
+ypos+=8
+
+// Section 3: 课程基本流程
+ypos=secLabel('课程基本流程',x,ypos,catColor)
+ypos=drawText(pro||'(未填写)',x,ypos,cw-24-24,'#e0e4ea',14)
+
+// Footer
+ypos=Math.max(ypos+24,Math.max(200,82+hh+infoH+objH+proH+80))
+cx.strokeStyle='rgba(41,121,255,0.06)';cx.lineWidth=1
+cx.beginPath();cx.moveTo(x,ypos);cx.lineTo(x+cw-48,ypos);cx.stroke()
+cx.font='11px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';cx.fillStyle='#556688'
+var now=new Date();var ds=now.toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'})
+cx.fillText(ds+' · MakeX · '+info.label,x,ypos+20)
+
+// 根据实际绘制位置扩展 canvas（防止内容被截断）
+if(ypos+50>H){
+var newH=Math.ceil(ypos+80);
+var oldImg=cv.getContext('2d').getImageData(0,0,W,H);
+cv.height=newH;
+H=newH;
+var bg2=cx.createLinearGradient(0,0,0,H);bg2.addColorStop(0,'#060a16');bg2.addColorStop(0.5,'#0c1428');bg2.addColorStop(1,'#060a16');
+cx.fillStyle=bg2;cx.fillRect(0,0,W,H);
+cx.putImageData(oldImg,0,0);
+}
+
+var finalH=Math.min(Math.ceil(ypos+80),H);if(finalH<H){var cc=document.createElement('canvas');cc.width=W;cc.height=finalH;cc.getContext('2d').drawImage(cv,0,0);cv=cc}
+// Copy to clipboard
+cv.toBlob(function(blob){
+navigator.clipboard.write([new ClipboardItem({'image/png':blob})])
+.then(function(){alert('图片已复制到剪贴板 ?')})
+.catch(function(){
+var a=document.createElement('a');a.href=cv.toDataURL('image/png')
+a.download='makex_'+info.label.toLowerCase()+'_'+sn+'.png'
+document.body.appendChild(a);a.click();document.body.removeChild(a)
+alert('图片已下载到本地（浏览器限制，无法直接复制到剪贴板）')})})}
+/* ===== IMAGE TOOLBAR ===== */
+var selectedImg=null;
+document.addEventListener('click',function(e){
+var target=e.target;
+if(target.tagName==='IMG'&&target.closest('.doc-editor')){selectedImg=target;showImgToolbar(target);return}
+if(!target.closest('.img-toolbar')){hideImgToolbar()}})
+function showImgToolbar(img){var tb=document.getElementById('img-toolbar')
+document.querySelectorAll('.doc-editor img.selected').forEach(function(el){el.classList.remove('selected')})
+img.classList.add('selected');tb.style.display='flex';var rect=img.getBoundingClientRect()
+var top=rect.top-42;if(top<6)top=rect.bottom+6
+tb.style.top=top+'px';tb.style.left=(rect.left+rect.width/2)+'px';tb.style.transform='translateX(-50%)'}
+function hideImgToolbar(){document.getElementById('img-toolbar').style.display='none'
+document.querySelectorAll('.doc-editor img.selected').forEach(function(el){el.classList.remove('selected')});selectedImg=null}
+function imgSize(pct){if(!selectedImg)return;selectedImg.style.width=pct+'%';selectedImg.style.height='auto'}
+function imgAlign(pos){if(!selectedImg)return;selectedImg.style.display='';selectedImg.style.float='';selectedImg.style.margin=''
+if(pos==='center'){selectedImg.style.display='block';selectedImg.style.margin='8px auto'}
+else{selectedImg.style.float=pos;selectedImg.style.margin=(pos==='left')?'4px 16px 8px 0':'4px 0 8px 16px'}}
+function imgDelete(){if(!selectedImg)return;selectedImg.remove();hideImgToolbar()}
+/* ===== SMART PASTE ===== */
+function openSmartPaste(){document.getElementById('paste-textarea').value='';document.getElementById('paste-overlay').classList.add('open')}
+function closeSmartPaste(e){if(e&&e.target!==e.currentTarget)return;document.getElementById('paste-overlay').classList.remove('open')}
+
+function doSmartPaste(){var text=document.getElementById('paste-textarea').value;if(!text.trim()){alert('请先粘贴内容');return}
+var fields={name:'',subtitle:'',equipment:'',objectives:'',procedure:''}
+var rules=[
+{keys:['课程副标题','副标题'],field:'subtitle'},
+{keys:['课程使用器材','使用器材','所需器材','课程需要器材','课程需要器材/设备/资料'],field:'equipment'},
+{keys:['课程目标','教学目标','学习目标'],field:'objectives'},
+{keys:['课程基本流程','基本流程','课程流程','教学流程','课程步骤'],field:'procedure'}
+]
+var lines=text.split('\n');var cur=null;var inQ=false;var inQH=false;var qhBuf=''
+for(var l=0;l<lines.length;l++){var line=lines[l];var tr=line.trim()
+if(inQH){var qidx=tr.indexOf('"');if(qidx!==-1){qhBuf+=tr.substring(0,qidx);var rest=tr.substring(qidx+1)
+for(var h=0;h<rules.length;h++){for(var k=0;k<rules[h].keys.length;k++){if(qhBuf.indexOf(rules[h].keys[k])!==-1){
+var c=rest.replace(/^\t+/,'').trim();if(c.startsWith('"')&&c.endsWith('"'))c=c.substring(1,c.length-1)
+fields[rules[h].field]+=c;cur=rules[h].field;break}}}
+inQH=false;qhBuf='';continue}else{qhBuf+='\n'+tr;continue}}
+if(tr.startsWith('"')&&!inQ){inQH=true;qhBuf=tr.substring(1);continue}
+var matched=false
+
+// Special handling: 课程关键内容 → name (line 1) + subtitle (rest)
+if(tr.indexOf('课程关键内容')!==-1||tr.indexOf('关键内容')!==-1){
+var secIdx=tr.indexOf('\t');var c=''
+if(secIdx!==-1)c=tr.substring(secIdx+1).trim().replace(/\t+/g,' ')
+else{c=tr}
+var isQuoted=c.startsWith('"');if(isQuoted)c=c.substring(1)
+if(c.endsWith('"')){c=c.substring(0,c.length-1);isQuoted=false}
+if(isQuoted){inQ=true;cur='_keyContent_'}
+var keyLines=c.split('\n')
+if(keyLines.length>0&&keyLines[0].trim()){fields.name=keyLines[0].trim()}
+if(keyLines.length>1){fields.subtitle=keyLines.slice(1).join('\n').trim()}
+cur=inQ?'_keyContent_':null;matched=true}
+
+if(!matched){for(var h=0;h<rules.length;h++){for(var k=0;k<rules[h].keys.length;k++){var key=rules[h].keys[k]
+var sep=null;var si=-1
+if((si=tr.indexOf(key+'\t'))!==-1)sep='\t'
+else if((si=tr.indexOf(key+':'))!==-1)sep=':'
+else if((si=tr.indexOf(key+'：'))!==-1)sep='：'
+if(si!==-1){var content=tr.substring(si+key.length+sep.length).trim().replace(/\t+/g,' ')
+if(content.startsWith('"')){inQ=true;cur=rules[h].field;content=content.substring(1)
+if(content.endsWith('"')){inQ=false;content=content.substring(0,content.length-1)}}
+fields[rules[h].field]+=(fields[rules[h].field]?'\n':'')+content
+if(!inQ)cur=null;matched=true;break}}
+if(matched)break}}
+if(!matched&&inQ&&cur){var cl=tr;if(cl.endsWith('"')){inQ=false;cl=cl.substring(0,cl.length-1)}
+if(cur==='_keyContent_'){
+var kl=cl.split('\n');for(var ki=0;ki<kl.length;ki++){if(kl[ki].trim()){if(!fields.name){fields.name=kl[ki].trim()}else{fields.subtitle+=(fields.subtitle?'\n':'')+kl[ki].trim()}}}
+}else{fields[cur]+='\n'+cl}
+if(!inQ)cur=null;continue}}
+var count=0
+if(fields.name){document.getElementById('doc-name').value=fields.name;document.getElementById('doc-title-display').textContent=fields.name;count++}
+if(fields.subtitle){document.getElementById('doc-subtitle').value=fields.subtitle;count++}
+if(fields.equipment){document.getElementById('doc-equipment').value=fields.equipment;count++}
+if(fields.objectives){document.getElementById('doc-objectives').textContent=fields.objectives;count++}
+if(fields.procedure){document.getElementById('doc-procedure').textContent=fields.procedure;count++}
+document.getElementById('paste-overlay').classList.remove('open')
+alert('已识别并填充 '+count+' 个字段')}function saveSlotFile(cat,index,name){var safeName=name.replace(/[<>:"\\/|?*]/g,'_').trim()||'untitled';var catLabel=CATS[cat].label.toLowerCase();var slotNum=pad(index+1);var filename='makex_'+catLabel+'_'+slotNum+'_'+safeName+'.txt'
+var content='[MakeX] '+CATS[cat].label+' - Slot '+slotNum+'\n课程名称: '+name+'\n创建时间: '+new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})+'\n---\n'+name+'\n'
+var blob=new Blob([content],{type:'text/plain;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
+
+/* ===== DOCUMENT EDITOR ===== */
+function openDocument(cat,index){docContext={cat:cat,index:index};var slot=data[cat][index];var info=CATS[cat];var slotNum=pad(index+1)
+document.getElementById('doc-badge').textContent=info.label+' · '+slotNum
+document.getElementById('doc-title-display').textContent=slot.name||'新课程'
+document.getElementById('doc-name').value=slot.name||''
+document.getElementById('doc-subtitle').value=slot.subtitle||''
+document.getElementById('doc-equipment').value=slot.equipment||''
+document.getElementById('doc-objectives').innerHTML=slot.objectives||''
+document.getElementById('doc-procedure').innerHTML=slot.procedure||''
+document.getElementById('view-category').classList.remove('active')
+document.getElementById('view-document').classList.add('active')}
+
+function closeDocument(){saveDocumentData();document.getElementById('view-document').classList.remove('active');document.getElementById('view-category').classList.add('active');renderCategory(docContext.cat);docContext=null}
+
+function saveDocumentData(){if(!docContext)return;var slot=data[docContext.cat][docContext.index];slot.name=document.getElementById('doc-name').value;slot.subtitle=document.getElementById('doc-subtitle').value;slot.equipment=document.getElementById('doc-equipment').value;slot.objectives=document.getElementById('doc-objectives').innerHTML;slot.procedure=document.getElementById('doc-procedure').innerHTML;saveData()}
+
+function downloadDocument(){saveDocumentData();if(!docContext)return;var slot=data[docContext.cat][docContext.index];var cat=docContext.cat;var index=docContext.index;var info=CATS[cat];var slotNum=pad(index+1);var safeName=(slot.name||'untitled').replace(/[<>:"\\/|?*]/g,'_').trim()||'untitled';var filename='makex_'+info.label.toLowerCase()+'_'+slotNum+'_'+safeName+'.txt'
+var line=function(t){return t+'\n'};var sep=function(){return'────────────────────────────────────\n'}
+var content=''
+content+=sep();content+=line('  MakeX '+info.label+' · Slot '+slotNum);content+=line('  '+ (slot.name||'(未命名)'));content+=sep()
+content+=line('\n【课程名称】'+ (slot.name||''));content+=line('【副标题】'+ (slot.subtitle||''));content+=line('【使用器材】'+ (slot.equipment||''));
+content+=line('\n━━━ 课程目标 ━━━\n');content+=line((document.getElementById('doc-objectives').textContent||'(未填写)'))
+content+=line('\n━━━ 课程基本流程 ━━━\n');content+=line((document.getElementById('doc-procedure').textContent||'(未填写)'))
+content+=line('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');content+=line('创建时间: '+new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}));content+=line('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+var blob=new Blob([content],{type:'text/plain;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
+
+updateCounts();
+
+/* === NEW FEATURES === */
+function showToast(t){var e=document.getElementById("toast-container");if(!e){e=document.createElement("div");e.id="toast-container";e.style.cssText="position:fixed;bottom:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:8px";document.body.appendChild(e)}var n=document.createElement("div");n.style.cssText="padding:12px 20px;border-radius:8px;background:var(--bg2);border:1px solid var(--border);font-size:13px;color:var(--text);animation:toastIn 0.3s ease-out";n.textContent=t;e.appendChild(n);setTimeout(function(){n.style.opacity="0";n.style.transition="opacity 0.3s";setTimeout(function(){n.remove()},300)},2500)}
+function getTheme(){return localStorage.getItem("makex_theme")||"dark"}
+function applyTheme(t){if(t==="light")document.documentElement.classList.add("light");else document.documentElement.classList.remove("light");localStorage.setItem("makex_theme",t)}
+function toggleTheme(){var t=getTheme();applyTheme(t==="light"?"dark":"light")}
+
+var I18N={zh:{dashboard:"统计",print:"打印",back:"返回",namePlaceholder:"输入课程名称...",searchPlaceholder:"搜索课程...",save:"保存",open:"打开",addCourse:"+ 添加课程",courseList:"课程列表"},en:{dashboard:"Stats",print:"Print",back:"Back",namePlaceholder:"Enter course name...",searchPlaceholder:"Search courses...",save:"Save",open:"Open",addCourse:"+ Add Course",courseList:"Course List"}};
+function toggleLang(){var cur=localStorage.getItem("makex_lang")||"zh";var next=cur==="zh"?"en":"zh";localStorage.setItem("makex_lang",next);applyLang(next)}
+function applyLang(l){var t=I18N[l]||I18N.zh;var b=document.getElementById("btn-lang");if(b)b.textContent=l==="zh"?"中文":"EN";var d=document.getElementById("btn-dash");if(d)d.innerHTML="📊 "+t.dashboard;var pb=document.getElementById("btn-print");if(pb)pb.innerHTML="🖨️ "+t.print;var bk=document.querySelectorAll(".btn-back");for(var i=0;i<bk.length;i++){var s=bk[i].querySelector("[data-i18n]");if(s)s.textContent=t.back}var si=document.querySelectorAll(".slot-input");for(var i=0;i<si.length;i++){if(si[i].placeholder)si[i].placeholder=t.namePlaceholder}var sv=document.querySelectorAll(".btn-save");for(var i=0;i<sv.length;i++){sv[i].textContent=t.save}var op=document.querySelectorAll(".btn-open");for(var i=0;i<op.length;i++){op[i].textContent=t.open}var ci=document.querySelector(".cat-slot-info");if(ci)ci.textContent=t.courseList;var sh=document.getElementById("search-input");if(sh)sh.placeholder=t.searchPlaceholder;var ac=document.getElementById("add-course-btn");if(ac)ac.textContent=t.addCourse}
+function setLang(l){applyLang(l)}
+try{var savedLang=localStorage.getItem("makex_lang");if(savedLang){applyLang(savedLang);var bl=document.getElementById("btn-lang");if(bl)bl.textContent=savedLang==="zh"?"中文":"EN"}}catch(e){}
+function filterSlots(){var q=document.getElementById("search-input").value.trim().toLowerCase();var rows=document.querySelectorAll("#slot-container .slot-row");var count=0;var nr=document.getElementById("search-no-result");if(nr)nr.remove();for(var i=0;i<rows.length;i++){var ip=rows[i].querySelector(".slot-input");var n=ip?ip.value.toLowerCase():"";if(!q||n.indexOf(q)!==-1){rows[i].classList.remove("hidden");count++}else{rows[i].classList.add("hidden")}}if(count===0){nr=document.createElement("div");nr.id="search-no-result";nr.style.cssText="padding:40px;text-align:center;color:var(--text-dim);font-size:14px";nr.textContent="无匹配结果";document.getElementById("slot-container").appendChild(nr)}}function flashSaveIndicator(){var e=document.getElementById("save-indicator");if(e){e.classList.add("visible");clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove("visible")},2000)}}
+function openDashboard(){var c=["inspire","explorer","explorer2","challenge"],t=0,h="";for(var i=0;i<c.length;i++){var a=data[c[i]]||[],f=0;for(var j=0;j<a.length;j++){if(a[j].name&&a[j].name.trim())f++}var p=Math.round((f/48)*100),co=CATS[c[i]].color;h+="<div class=dash-card><div>"+CATS[c[i]].icon+" "+CATS[c[i]].label+"</div>";h+='<div class=dash-stat><span>总计</span><span style="font-size:18px;font-weight:700;color:'+co+'">48</span></div>';h+='<div class=dash-stat><span>已填</span><span style="font-size:18px;font-weight:700;color:'+co+'">'+f+'</span></div>';h+='<div class=dash-stat><span>空白</span><span style="font-size:18px;font-weight:700">'+(48-f)+'</span></div>';h+='<div class=dash-chart-bar><div class=dash-chart-fill style=width:'+p+"%;background:"+co+"></div></div></div>";t+=f}h+='<div class=dash-summary><div><div style="font-size:32px;font-weight:800;color:var(--blue)">'+t+'</div><div>总计</div></div>';h+='<div><div style="font-size:32px;font-weight:800;color:var(--cyan)">'+Math.round((t/144)*100)+'%</div><div>完成率</div></div>';h+='<div><div style="font-size:32px;font-weight:800;color:var(--red)">'+(144-t)+'</div><div>空白</div></div></div>';document.getElementById("dash-content").innerHTML=h;document.querySelectorAll(".view").forEach(function(v){v.classList.remove("active")});document.getElementById("view-dashboard").classList.add("active")}
+function closeDashboard(){document.querySelectorAll(".view").forEach(function(v){v.classList.remove("active")});document.getElementById("view-main").classList.add("active");updateCounts()}
+function printView(){var c=["inspire","explorer","explorer2","challenge"],h="<h1>MakeX Curriculum</h1><p>"+new Date().toLocaleDateString("zh-CN")+"</p>";for(var i=0;i<c.length;i++){var a=data[c[i]],l=CATS[c[i]].label,f=0;for(var j=0;j<a.length;j++){if(a[j].name&&a[j].name.trim())f++}h+="<h2>"+l+" ("+f+"/"+a.length+")</h2><table style=width:100%;border-collapse:collapse><tr><th style=border:1px solid #ccc;padding:6px>#</th><th style=border:1px solid #ccc;padding:6px>名称</th><th style=border:1px solid #ccc;padding:6px>器材</th></tr>";for(var j=0;j<a.length;j++){var s=a[j];if(s.name&&s.name.trim()){h+="<tr><td style=border:1px solid #ccc;padding:4px>"+(j+1)+"</td><td style=border:1px solid #ccc;padding:4px>"+s.name+"</td><td style=border:1px solid #ccc;padding:4px>"+(s.equipment||"")+"</td></tr>"}}h+="</table>"}var w=window.open("");w.document.write("<html><head><title>MakeX</title><style>body{font-family:sans-serif;padding:20px}</style></head><body>"+h+'<scr'+'ipt>window.print();window.close()<\/script></body></html>');w.document.close()}
+applyTheme(getTheme());var l=localStorage.getItem("makex_lang");if(l)document.getElementById("btn-lang").value=l;updateCounts();setTimeout(function(){var h=document.getElementById("shortcut-hint");if(h){h.classList.add("visible");setTimeout(function(){h.classList.remove("visible")},5000)}},1000);document.addEventListener("keydown",function(e){if(e.ctrlKey&&e.key==="s"){e.preventDefault();var d=document.getElementById("view-document");if(d&&d.classList.contains("active")){saveDocumentData();showToast("已保存");flashSaveIndicator()}}if(e.ctrlKey&&e.key==="p"){e.preventDefault();printView()}if(e.ctrlKey&&e.key==="f"){e.preventDefault();var s=document.getElementById("search-input");if(s){s.focus();s.select()}}});
+</script>
+
+<div id="view-dashboard" class="view">
+<div class="cat-header"><button class="btn-back" onclick="closeDashboard()">← 返回</button><div class="cat-title" style="margin-left:auto">📊 统计数据</div></div>
+<div class="dash-grid fade-in" id="dash-content"></div></div>
+<div class="save-indicator" id="save-indicator"><span class="dot"></span>自动保存</div>
+<div class="shortcut-hint" id="shortcut-hint">Ctrl+S 保存 · Ctrl+P 打印 · Ctrl+F 搜索</div>
+<div class="toast-container" id="toast-container"></div>
+</body>
+</html>
