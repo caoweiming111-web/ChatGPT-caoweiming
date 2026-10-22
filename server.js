@@ -1,33 +1,64 @@
-﻿const http=require('http');const fs=require('fs');const path=require('path');
-const PORT=process.env.PORT||3456;
-const DIR=__dirname;
-const HTML=path.join(DIR,'index.html');
-const DATA=path.join(DIR,'makex_data.json');
-// CORS 允许 GitHub Pages 访问
-const ALLOW_ORIGIN='*';
-let data={};
-try{if(fs.existsSync(DATA))data=JSON.parse(fs.readFileSync(DATA,'utf8'))}catch(e){}
-function saveFile(){try{fs.writeFileSync(DATA,JSON.stringify(data,null,2),'utf8')}catch(e){}}
-const sv=http.createServer(function(req,res){
-res.setHeader('Access-Control-Allow-Origin',ALLOW_ORIGIN);
-res.setHeader('Access-Control-Allow-Methods','GET,POST,OPTIONS');
-res.setHeader('Access-Control-Allow-Headers','Content-Type');
-if(req.method==='OPTIONS'){res.writeHead(204);res.end();return}
-if(req.url==='/data.json'){
-res.writeHead(200,{'Content-Type':'application/json;charset=utf-8'});
-res.end(JSON.stringify(data));
-return
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const PORT = process.env.PORT || 3456;
+const HTML = path.join(__dirname, 'index.html');
+const DATA = process.env.MAKEX_DATA_FILE || path.join(__dirname, 'makex_data.json');
+const categories = ['inspire', 'explorer', 'explorer2', 'challenge'];
+function validData(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) &&
+    categories.every(key => Array.isArray(value[key]) && value[key].every(
+      course => course && typeof course === 'object' && !Array.isArray(course)));
 }
-if(req.url==='/update'&&req.method==='POST'){
-var body='';
-req.on('data',function(c){body+=c});
-req.on('end',function(){
-try{data=JSON.parse(body);saveFile();res.writeHead(200,{'Content-Type':'application/json;charset=utf-8'});res.end('{"ok":true}')}
-catch(e){res.writeHead(400);res.end('{"error":"bad json"}')}
-});
-return
+let data = { inspire: [], explorer: [], explorer2: [], challenge: [] };
+try {
+  if (fs.existsSync(DATA)) {
+    data = JSON.parse(fs.readFileSync(DATA, 'utf8').replace(/^\uFEFF/, ''));
+    if (!data.explorer2) data.explorer2 = [];
+    if (!validData(data)) throw new Error('Invalid course structure');
+  }
+} catch (error) {
+  console.error('Cannot load course data:', error.message);
+  process.exit(1);
 }
-try{var html=fs.readFileSync(HTML,'utf8');res.writeHead(200,{'Content-Type':'text/html;charset=utf-8'});res.end(html)}
-catch(e){res.writeHead(404);res.end('Not found')}
+const sv = http.createServer((req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 'no-store');
+  function json(status, value) {
+    res.writeHead(status, { 'Content-Type': 'application/json;charset=utf-8' });
+    res.end(JSON.stringify(value));
+  }
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+  if (req.url === '/data.json' && req.method === 'GET') { json(200, data); return; }
+  if (req.url === '/update' && req.method === 'POST') {
+    let body = '';
+    req.setEncoding('utf8');
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      let next;
+      try { next = JSON.parse(body); }
+      catch { json(400, { error: 'bad json' }); return; }
+      if (!validData(next)) { json(400, { error: 'invalid course data' }); return; }
+      const temporary = DATA + '.tmp';
+      try {
+        fs.writeFileSync(temporary, JSON.stringify(next, null, 2), 'utf8');
+        fs.renameSync(temporary, DATA);
+        data = next;
+        json(200, { ok: true });
+      } catch (error) {
+        console.error('Cannot save course data:', error.message);
+        try { fs.unlinkSync(temporary); } catch {}
+        json(500, { error: 'cannot save course data' });
+      }
+    });
+    return;
+  }
+  try {
+    const html = fs.readFileSync(HTML, 'utf8');
+    res.writeHead(200, { 'Content-Type': 'text/html;charset=utf-8' });
+    res.end(html);
+  } catch { res.writeHead(404); res.end('Not found'); }
 });
-sv.listen(PORT,'0.0.0.0',function(){console.log('MakeX server OK on port '+PORT)});
+sv.listen(PORT, '0.0.0.0', () => console.log('MakeX server OK on port ' + sv.address().port));

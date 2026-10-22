@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -363,34 +363,69 @@ alert(t);
 var syncTimer = null;
 var lastSyncData = null;
 var syncConnected = false;
+var saveInFlight = false;
+var localVersion = 0;
+var pendingSave = localStorage.getItem('makex_pending_save') === '1';
+function syncStatus(text){
+var el = document.getElementById('ws-status');
+if(el)el.textContent = text;
+}
+function validRemoteData(d){
+return d && ['inspire','explorer','explorer2','challenge'].every(function(k){return Array.isArray(d[k])});
+}
+function pushData(){
+if(!pendingSave || saveInFlight || location.protocol === 'file:')return;
+saveInFlight = true;
+var version = localVersion;
+var snapshot = JSON.stringify(data);
+syncStatus('◌ 正在同步');
+fetch('/update', {method:'POST',headers:{'Content-Type':'application/json'},body:snapshot})
+.then(function(r){if(!r.ok)throw Error('save failed');return r.json()})
+.then(function(result){
+if(!result.ok)throw Error('save failed');
+syncConnected = true;
+lastSyncData = snapshot;
+if(localVersion === version){
+pendingSave = false;
+localStorage.removeItem('makex_pending_save');
+}
+saveInFlight = false;
+syncStatus(pendingSave ? '◌ 等待同步' : '● 已同步');
+if(pendingSave)pushData();
+}).catch(function(){
+saveInFlight = false;
+syncConnected = false;
+syncStatus('○ 已存本机，待同步');
+});
+}
 function pollData(){
-fetch('/data.json').then(function(r){
+if(location.protocol === 'file:')return;
+if(pendingSave){pushData();return}
+if(saveInFlight || docContext)return;
+var version = localVersion;
+fetch('/data.json', {cache:'no-store'}).then(function(r){
 if(!r.ok)throw Error();
 return r.json();
 }).then(function(d){
+if(pendingSave || saveInFlight || version !== localVersion || docContext)return;
+if(!validRemoteData(d))throw Error('invalid course data');
 syncConnected = true;
-var el = document.getElementById('ws-status');
-if(el)el.textContent = '● 在线';
+syncStatus('● 已同步');
 var key = JSON.stringify(d);
 if(key !== lastSyncData){
 lastSyncData = key;
-var oldCat = currentCategory;
 data = d;
-if(!data||!data.inspire)data = loadData();
-localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+localStorage.setItem(STORAGE_KEY, key);
+localStorage.setItem('makex_courses', key);
 updateCounts();
 var vc = document.getElementById('view-category');
-if(vc.classList.contains('active') && oldCat) renderCategory(oldCat);
+if(vc && vc.classList.contains('active') && currentCategory)renderCategory(currentCategory);
 }
-}).catch(function(){
-syncConnected = false;
-var el = document.getElementById('ws-status');
-if(el)el.textContent = '○ 离线';
-});
+}).catch(function(){syncConnected = false;syncStatus('○ 离线');});
 }
 var data = loadData();
-pollData();
 syncTimer = setInterval(pollData, 3000);
+setTimeout(pollData, 0);
 var currentCategory = 'inspire';
 var dragMode = '';
 var docContext = null;
@@ -406,7 +441,16 @@ function loadData(){try{var r=localStorage.getItem("makex_data")||localStorage.g
 if(p&&Array.isArray(p.explorer)){var _hasEx=false;for(var _i=0;_i<p.explorer.length;_i++){if(p.explorer[_i]&&p.explorer[_i].name&&p.explorer[_i].name.trim()){_hasEx=true;break}}if(!_hasEx){var _seed=["Onshape 的学习及激光雕刻机的使用1","Onshape 的学习及激光雕刻机的使用2","Onshape 的学习及激光雕刻机的使用3","基于Onshape与激光雕刻机的螺丝量规制作","基于Onshape与激光雕刻机的齿轮的制作","认识电子元件与电路基础","搭建简单电路与LED控制（手电筒）"];for(var _j=0;_j<_seed.length;_j++){p.explorer.push(emptySlotNamed(_seed[_j]))}}}for(var _ki=0;_ki<keys.length;_ki++){var _k2=keys[_ki];if(Array.isArray(p[_k2])){for(var _si=0;_si<p[_k2].length;_si++){if(p[_k2][_si]&&typeof p[_k2][_si]==='object'&&!p[_k2][_si].theme){p[_k2][_si].theme='主题'+(Math.floor(_si/4)+1)}}}}
 return p}}catch(e){}return defaultData()}
 
-function saveData(){localStorage.setItem("makex_data",JSON.stringify(data));localStorage.setItem("makex_courses",JSON.stringify(data));updateCounts()}
+function saveData(){
+localStorage.setItem("makex_data",JSON.stringify(data));
+localStorage.setItem("makex_courses",JSON.stringify(data));
+localVersion++;
+pendingSave = true;
+localStorage.setItem('makex_pending_save','1');
+updateCounts();
+syncStatus('○ 已存本机，待同步');
+pushData();
+}
 
 function addSlot(cat){
 var arr=data[cat];
