@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -113,6 +113,12 @@
   .paste-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
   .doc-editor{width:100%;min-height:120px;padding:10px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.30);color:var(--text);font-size:14px;font-family:var(--font);outline:none;transition:all 0.2s;line-height:1.7;white-space:pre-wrap;word-wrap:break-word;overflow-y:visible}
   .doc-editor:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(41,121,255,0.12)}
+  .rich-toolbar{display:flex;align-items:center;gap:4px;flex-wrap:wrap;user-select:none;margin-top:2px}
+  .rich-toolbar button{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:28px;padding:0 8px;border-radius:5px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.04);color:var(--text-dim);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all 0.15s}
+  .rich-toolbar button:hover{border-color:rgba(41,121,255,0.45);background:rgba(41,121,255,0.12);color:var(--blue)}
+  .rich-toolbar button.active{border-color:rgba(41,121,255,0.55);background:rgba(41,121,255,0.18);color:var(--blue)}
+  .rich-toolbar .rich-bold{font-family:Georgia,serif;font-size:15px;font-weight:700}
+  .rich-toolbar .rich-size-value{min-width:40px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--text-dim)}
   .doc-editor:empty::before{content:attr(data-placeholder);color:rgba(255,255,255,0.20);pointer-events:none}
     .img-toolbar{display:none;position:fixed;z-index:999;padding:4px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;gap:2px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,0.5);pointer-events:auto;white-space:nowrap}
   .img-toolbar button{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:11px;font-family:var(--mono);transition:all 0.15s;letter-spacing:0.5px}
@@ -180,7 +186,18 @@
 .th-handle:active{cursor:grabbing}
 .theme-header.dragging{opacity:0.5;border-style:dashed}
 .theme-header.drag-over{border-color:var(--cyan);background:rgba(0,229,255,0.12)}
-.slot-insert-row.drag-over{background:rgba(0,229,255,0.15);border-radius:6px;box-shadow:0 0 0 1px rgba(0,229,255,0.4)}.slot-insert{display:block;width:28px;height:20px;margin:2px auto;border:none;border-radius:4px;background:rgba(41,121,255,0.05);color:rgba(41,121,255,0.4);cursor:pointer;font-size:13px;transition:all 0.2s}
+.slot-insert-row.drag-over{background:rgba(0,229,255,0.15);border-radius:6px;box-shadow:0 0 0 1px rgba(0,229,255,0.4)}
+.ppt-dropzone{padding:22px;border:2px dashed rgba(0,229,255,0.2);border-radius:8px;text-align:center;cursor:pointer;transition:all 0.2s;background:rgba(0,229,255,0.03)}
+.ppt-dropzone:hover,.ppt-dropzone.over{border-color:var(--cyan);background:rgba(0,229,255,0.08)}
+.ppt-list{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.ppt-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05)}
+.ppt-item .ico{font-size:16px}
+.ppt-item .info{flex:1;min-width:0}
+.ppt-item .nm{font-size:13px;color:var(--text);word-break:break-all}
+.ppt-item .loc{font-size:10px;color:var(--text-dim);word-break:break-all;margin-top:2px}
+.ppt-item button{padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--text-dim);cursor:pointer;font-size:11px;white-space:nowrap}
+.ppt-item button:hover{background:rgba(41,121,255,0.15);color:var(--blue)}
+.ppt-item button.del:hover{background:rgba(255,23,68,0.15);color:var(--red)}.slot-insert{display:block;width:28px;height:20px;margin:2px auto;border:none;border-radius:4px;background:rgba(41,121,255,0.05);color:rgba(41,121,255,0.4);cursor:pointer;font-size:13px;transition:all 0.2s}
 .slot-insert-row{display:flex;justify-content:center;gap:4px;margin:2px 0;min-height:28px;align-items:center}
 .slot-insert{display:inline-flex;align-items:center;justify-content:center;width:28px;height:20px;border:none;border-radius:4px;background:rgba(41,121,255,0.05);color:rgba(41,121,255,0.4);cursor:pointer;font-size:13px;transition:all 0.2s;padding:0}
 .slot-insert:hover{background:rgba(41,121,255,0.15);color:var(--blue)}
@@ -203,45 +220,45 @@
             
       <button id="btn-dash" onclick="openDashboard()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">📊 统计</button>
       <button id="btn-print" onclick="printView()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">🖨️ 打印</button>
+      <button id="btn-sync" onclick="pushToServer(false)" title="把课程数据同步到项目文件（用于提交到 Git）" style="background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.25);color:var(--cyan);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">☁ 同步到Git</button>
       <button id="btn-theme" onclick="toggleTheme()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">🌓</button>
       <button id="btn-lang" onclick="toggleLang()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;font-size:11px;font-family:var(--mono);cursor:pointer">中文</button>
 <span id="ws-status" style="position:absolute;right:40px;top:24px;font-size:11px;font-family:var(--mono);color:var(--text-dim);letter-spacing:1px">○ 离线</span>
 <div class="logo-sub">Creative · Explore · Conquer</div>
-      <span id="ws-status" style="position:absolute;right:40px;top:24px;font-size:11px;font-family:var(--mono);color:var(--text-dim);letter-spacing:1px">○ 离线</span>
     </div>
   </header>
 
   <!-- ===== VIEW: MAIN ===== -->
   <div id="view-main" class="view active">
-    <p style="text-align:center;font-size:13px;color:var(--text-dim);letter-spacing:2px;margin-top:12px">选择一个模块开始你的旅程</p>
+    <p style="text-align:center;font-size:13px;color:var(--text-dim);letter-spacing:2px;margin-top:12px"><span data-i18n="chooseModule">选择一个模块开始你的旅程</span></p>
     <div class="card-grid fade-in">
       <div class="card-main card-inspire" onclick="openCategory('inspire')">
         <div class="card-main-icon">🚀</div>
         <div class="card-main-title">Inspire</div>
-        <div class="card-main-desc">灵感 · 启蒙 · 创造的火花</div>
+        <div class="card-main-desc"><span data-i18n="inspireDesc">灵感 · 启蒙 · 创造的火花</span></div>
         <div class="card-main-count"><span id="count-inspire">0</span> / <span id="total-inspire">48</span></div>
       </div>
       <div class="card-main card-explorer" onclick="openCategory('explorer')">
         <div class="card-main-icon">🔭</div>
-        <div class="card-main-title">Explorer 第一年</div>
-        <div class="card-main-desc">探索 · 基础 · 入门实践</div>
+        <div class="card-main-title" data-i18n="explorer1">Explorer 第一年</div>
+        <div class="card-main-desc"><span data-i18n="explorer1Desc">探索 · 基础 · 入门实践</span></div>
         <div class="card-main-count"><span id="count-explorer">0</span> / <span id="total-explorer">48</span></div>
       </div>
             <div class="card-main card-explorer2" onclick="openCategory('explorer2')">
         <div class="card-main-icon">🧪</div>
-        <div class="card-main-title">Explorer 第二年</div>
-        <div class="card-main-desc">探索 · 进阶 · 深入实践</div>
+        <div class="card-main-title" data-i18n="explorer2">Explorer 第二年</div>
+        <div class="card-main-desc"><span data-i18n="explorer2Desc">探索 · 进阶 · 深入实践</span></div>
         <div class="card-main-count"><span id="count-explorer2">0</span> / <span id="total-explorer2">48</span></div>
       </div>
 <div class="card-main card-challenge" onclick="openCategory('challenge')">
         <div class="card-main-icon">⚡</div>
         <div class="card-main-title">Challenge</div>
-        <div class="card-main-desc">挑战 · 突破 · 极限的超越</div>
+        <div class="card-main-desc"><span data-i18n="challengeDesc">挑战 · 突破 · 极限的超越</span></div>
         <div class="card-main-count"><span id="count-challenge">0</span> / <span id="total-challenge">48</span></div>
       </div>
     </div>
     <div style="text-align:center;margin-top:48px">
-      <div style="display:inline-block;padding:8px 20px;border:1px solid rgba(255,255,255,0.04);border-radius:6px;font-size:11px;color:var(--text-dim);letter-spacing:1px;font-family:var(--mono)">
+      <div id="saved-summary" style="display:inline-block;padding:8px 20px;border:1px solid rgba(255,255,255,0.04);border-radius:6px;font-size:11px;color:var(--text-dim);letter-spacing:1px;font-family:var(--mono)">
         ◆ 共 <span id="total-saved">0</span> 个课程已保存
       </div>
     </div>
@@ -250,9 +267,9 @@
   <!-- ===== VIEW: CATEGORY ===== -->
   <div id="view-category" class="view">
     <div class="cat-header">
-      <button class="btn-back" onclick="goHome()">← <span data-i18n="back">返回</span></button><input type="text" id="search-input" placeholder="搜索课程..." oninput="filterSlots()" style="padding:7px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.3);color:var(--text);font-size:13px;outline:none;width:200px">
+      <button class="btn-back" onclick="goHome()">← <span data-i18n="back">返回</span></button><input type="text" id="search-input" data-i18n-placeholder="searchPlaceholder" placeholder="搜索课程..." oninput="filterSlots()" style="padding:7px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.3);color:var(--text);font-size:13px;outline:none;width:200px">
       <div class="cat-title" id="cat-title">INSPIRE</div>
-      <span class="cat-slot-info">课程列表</span>
+      <span class="cat-slot-info" data-i18n="courseList">课程列表</span>
     </div>
     <div id="slot-container" class="slot-grid"></div>
   </div>
@@ -260,7 +277,7 @@
   <!-- ===== VIEW: DOCUMENT EDITOR ===== -->
   <div id="view-document" class="view">
     <div class="doc-header">
-      <button class="btn-back" onclick="closeDocument()">← <span data-i18n="back">返回课程列表</span></button>
+      <button class="btn-back" onclick="closeDocument()">← <span data-i18n="backToCourses">返回课程列表</span></button>
       <div class="doc-title-group">
         <span class="doc-badge" id="doc-badge">INSPIRE · 01</span>
         <span class="doc-title" id="doc-title-display">课程文档</span>
@@ -269,36 +286,49 @@
 
     <!-- Part 1: Three-block header -->
     <div class="doc-section">
-      <div class="doc-section-title"><span class="icon">📋</span> 课程信息</div>
+      <div class="doc-section-title"><span class="icon">📋</span> <span data-i18n="courseInfo">课程信息</span></div>
       <div class="doc-row-3">
         <div class="doc-field">
-          <label>课程名称</label>
-          <input type="text" id="doc-name" placeholder="输入课程名称">
+          <label data-i18n="courseName">课程名称</label>
+          <input type="text" id="doc-name" placeholder="输入课程名称" data-i18n-placeholder="nameInputPlaceholder">
         </div>
         <div class="doc-field">
-          <label>课程副标题</label>
-          <input type="text" id="doc-subtitle" placeholder="输入副标题">
+          <label data-i18n="courseSubtitle">课程副标题</label>
+          <input type="text" id="doc-subtitle" placeholder="输入副标题" data-i18n-placeholder="subtitlePlaceholder">
         </div>
         <div class="doc-field">
-          <label>课程使用器材</label>
-          <input type="text" id="doc-equipment" placeholder="例如: MakeX 机器人套件">
+          <label data-i18n="courseEquipment">课程使用器材</label>
+          <input type="text" id="doc-equipment" placeholder="例如: MakeX 机器人套件" data-i18n-placeholder="equipmentPlaceholder">
         </div>
       </div>
     </div>
 
     <!-- Part 2: Objectives -->
     <div class="doc-section">
-      <div class="doc-section-title"><span class="icon">🎯</span> 课程目标</div>
+      <div class="doc-section-title"><span class="icon">🎯</span> <span data-i18n="objectives">课程目标</span></div>
       <div class="doc-field">
-        <div id="doc-objectives" class="doc-editor" contenteditable="true" data-placeholder="描述本课程的学习目标..."></div>
+        <div id="doc-objectives" class="doc-editor" contenteditable="true" data-placeholder="描述本课程的学习目标..." data-i18n-placeholder="objectivesPlaceholder"></div>
+        <div class="rich-toolbar" data-editor="doc-objectives" onmousedown="return richToolbarMousedown(event)">
+          <button type="button" data-rich-action="size-down" title="减小字号" data-i18n-title="fontSizeDown">A-</button>
+          <span class="rich-size-value" data-rich-size-value="doc-objectives">14</span>
+          <button type="button" data-rich-action="size-up" title="增大字号" data-i18n-title="fontSizeUp">A+</button>
+          <button type="button" class="rich-bold" data-rich-action="bold" title="加粗" data-i18n-title="bold">B</button>
+        </div>
       </div>
     </div>
 
+
     <!-- Part 3: Procedure -->
     <div class="doc-section">
-      <div class="doc-section-title"><span class="icon">📝</span> 课程基本流程</div>
+      <div class="doc-section-title"><span class="icon">📝</span> <span data-i18n="procedure">课程基本流程</span></div>
       <div class="doc-field">
-        <div id="doc-procedure" class="doc-editor" contenteditable="true" data-placeholder="分步骤描述课程流程..." style="min-height:200px"></div>
+        <div id="doc-procedure" class="doc-editor" contenteditable="true" data-placeholder="分步骤描述课程流程..." data-i18n-placeholder="procedurePlaceholder" style="min-height:200px"></div>
+        <div class="rich-toolbar" data-editor="doc-procedure" onmousedown="return richToolbarMousedown(event)">
+          <button type="button" data-rich-action="size-down" title="减小字号" data-i18n-title="fontSizeDown">A-</button>
+          <span class="rich-size-value" data-rich-size-value="doc-procedure">14</span>
+          <button type="button" data-rich-action="size-up" title="增大字号" data-i18n-title="fontSizeUp">A+</button>
+          <button type="button" class="rich-bold" data-rich-action="bold" title="加粗" data-i18n-title="bold">B</button>
+        </div>
       </div>
     </div>
 
@@ -308,19 +338,31 @@
         <button onclick="imgSize(75)">75%</button>
         <button onclick="imgSize(100)">100%</button>
         <span class="img-sep"></span>
-        <button onclick="imgAlign(&apos;left&apos;)" title="左对齐">L</button>
-        <button onclick="imgAlign(&apos;center&apos;)" title="居中">C</button>
-        <button onclick="imgAlign(&apos;right&apos;)" title="右对齐">R</button>
+        <button onclick="imgAlign(&apos;left&apos;)" title="左对齐" data-i18n-title="imageLeft">L</button>
+        <button onclick="imgAlign(&apos;center&apos;)" title="居中" data-i18n-title="imageCenter">C</button>
+        <button onclick="imgAlign(&apos;right&apos;)" title="右对齐" data-i18n-title="imageRight">R</button>
         <span class="img-sep"></span>
-        <button onclick="imgDelete()" title="删除">🗑️</button>
+        <button onclick="imgDelete()" title="删除" data-i18n-title="delete">🗑️</button>
       </div>
 
+
+    <!-- PPT 附件 -->
+    <div class="doc-section">
+      <div class="doc-section-title"><span class="icon">📎</span> <span data-i18n="ppts">PPT 附件</span></div>
+      <div id="ppt-dropzone" class="ppt-dropzone" onclick="document.getElementById('ppt-file').click()" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');handlePptDrop(event.dataTransfer.files)">
+        <div style="font-size:32px;margin-bottom:6px">📁</div>
+        <div style="font-size:13px;color:var(--text-dim)"><span data-i18n="dropHint">将 PPT 拖到这里，或点击选择文件</span></div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;opacity:0.6"><span data-i18n="dropSupport">支持 .ppt / .pptx</span></div>
+        <input type="file" id="ppt-file" accept=".ppt,.pptx" style="display:none" onchange="handlePptFiles(this.files)">
+      </div>
+      <div id="ppt-list" class="ppt-list"></div>
+    </div>
     <div class="doc-actions">
-      <button class="btn-secondary" onclick="closeDocument()">取消</button>
-      <button class="btn-secondary" onclick="openSmartPaste()">📋 智能粘贴</button>
-      <button class="btn-secondary" onclick="saveDocumentData();alert('数据已保存')">💾 保存数据</button>
-      <button class="btn-secondary" onclick="generateImage()">🖼️ 生成图片</button>
-      <button class="btn-primary" onclick="downloadDocument()">📥 保存并下载文档</button>
+      <button class="btn-secondary" onclick="closeDocument()" data-i18n="cancel">取消</button>
+      <button class="btn-secondary" onclick="openSmartPaste()" data-i18n="smartPasteBtn">📋 智能粘贴</button>
+      <button class="btn-secondary" onclick="saveDocumentData();alert(tr('dataSaved'))" data-i18n="saveDataBtn">💾 保存数据</button>
+      <button class="btn-secondary" onclick="generateImage()" data-i18n="generateImageBtn">🖼️ 生成图片</button>
+      <button class="btn-primary" onclick="downloadDocument()" data-i18n="downloadDocBtn">📥 保存并下载文档</button>
     </div>
   </div>
 
@@ -328,18 +370,18 @@
   <div class="paste-overlay" id="paste-overlay" onclick="closeSmartPaste(event)">
     <div class="paste-modal" onclick="event.stopPropagation()">
       <div class="paste-head">
-        <h2>📋 智能粘贴</h2>
+        <h2 data-i18n="pasteTitle">📋 智能粘贴</h2>
         <button class="paste-close" onclick="closeSmartPaste()">✕</button>
       </div>
       <div class="paste-body">
         <div class="paste-hint">
-          <strong>粘贴课程内容</strong>，系统将自动识别并填入对应区域。<br>
-          支持格式：<strong>课程关键内容</strong> / <strong>课程目标</strong> / <strong>课程需要器材/设备/资料</strong> / <strong>课程基本流程</strong>
+          <strong data-i18n="pasteContent">粘贴课程内容</strong><span data-i18n="pasteAutoFill">，系统将自动识别并填入对应区域。</span><br>
+          <span data-i18n="supportedFormats">支持格式：</span><strong data-i18n="courseKeyContent">课程关键内容</strong> / <strong data-i18n="objectives">课程目标</strong> / <strong data-i18n="courseEquipmentKey">课程需要器材/设备/资料</strong> / <strong data-i18n="procedure">课程基本流程</strong>
         </div>
-        <textarea class="paste-textarea" id="paste-textarea" placeholder="在此粘贴课程内容...&#10;&#10;例如:&#10;课程关键内容&#9;&quot;Onshape 的学习及激光雕刻机的使用2&#10;Onshape 复杂草图绘制与尺寸优化&quot;&#10;&#10;课程目标&#9;&quot;1、使用镜像，构造线等命令&#10;2、独立完成 Onshape 草图的合规性检查&quot;&#10;&#10;课程基本流程&#9;&quot;1、Solidworks操作标准化&#10;2、球Intake结构搭建测试&quot;"></textarea>
+        <textarea class="paste-textarea" id="paste-textarea" data-i18n-placeholder="pastePlaceholder" placeholder="在此粘贴课程内容...&#10;&#10;例如:&#10;课程关键内容&#9;&quot;Onshape 的学习及激光雕刻机的使用2&#10;Onshape 复杂草图绘制与尺寸优化&quot;&#10;&#10;课程目标&#9;&quot;1、使用镜像，构造线等命令&#10;2、独立完成 Onshape 草图的合规性检查&quot;&#10;&#10;课程基本流程&#9;&quot;1、Solidworks操作标准化&#10;2、球Intake结构搭建测试&quot;"></textarea>
         <div class="paste-actions">
-          <button class="btn-secondary" onclick="closeSmartPaste()">取消</button>
-          <button class="btn-primary" onclick="doSmartPaste()">🔄 解析并填充</button>
+          <button class="btn-secondary" onclick="closeSmartPaste()" data-i18n="cancel">取消</button>
+          <button class="btn-primary" onclick="doSmartPaste()" data-i18n="parseFillBtn">🔄 解析并填充</button>
         </div>
       </div>
     </div>
@@ -363,75 +405,84 @@ alert(t);
 var syncTimer = null;
 var lastSyncData = null;
 var syncConnected = false;
-var saveInFlight = false;
-var localVersion = 0;
-var pendingSave = localStorage.getItem('makex_pending_save') === '1';
-function syncStatus(text){
-var el = document.getElementById('ws-status');
-if(el)el.textContent = text;
-}
-function validRemoteData(d){
-return d && ['inspire','explorer','explorer2','challenge'].every(function(k){return Array.isArray(d[k])});
-}
-function pushData(){
-if(!pendingSave || saveInFlight || location.protocol === 'file:')return;
-saveInFlight = true;
-var version = localVersion;
-var snapshot = JSON.stringify(data);
-syncStatus('◌ 正在同步');
-fetch('/update', {method:'POST',headers:{'Content-Type':'application/json'},body:snapshot})
-.then(function(r){if(!r.ok)throw Error('save failed');return r.json()})
-.then(function(result){
-if(!result.ok)throw Error('save failed');
-syncConnected = true;
-lastSyncData = snapshot;
-if(localVersion === version){
-pendingSave = false;
-localStorage.removeItem('makex_pending_save');
-}
-saveInFlight = false;
-syncStatus(pendingSave ? '◌ 等待同步' : '● 已同步');
-if(pendingSave)pushData();
-}).catch(function(){
-saveInFlight = false;
-syncConnected = false;
-syncStatus('○ 已存本机，待同步');
-});
-}
 function pollData(){
-if(location.protocol === 'file:')return;
-if(pendingSave){pushData();return}
-if(saveInFlight || docContext)return;
-var version = localVersion;
-fetch('/data.json', {cache:'no-store'}).then(function(r){
+var dataUrl=location.protocol==='file:'?'http://localhost:3456/data.json':'/data.json';
+fetch(dataUrl).then(function(r){
 if(!r.ok)throw Error();
 return r.json();
 }).then(function(d){
-if(pendingSave || saveInFlight || version !== localVersion || docContext)return;
-if(!validRemoteData(d))throw Error('invalid course data');
 syncConnected = true;
-syncStatus('● 已同步');
+var el = document.getElementById('ws-status');
+updateConnectionStatus();
 var key = JSON.stringify(d);
 if(key !== lastSyncData){
 lastSyncData = key;
+var oldCat = currentCategory;
 data = d;
-localStorage.setItem(STORAGE_KEY, key);
-localStorage.setItem('makex_courses', key);
+if(!data||!data.inspire)data = loadData();
+localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 updateCounts();
 var vc = document.getElementById('view-category');
-if(vc && vc.classList.contains('active') && currentCategory)renderCategory(currentCategory);
+if(vc.classList.contains('active') && oldCat) renderCategory(oldCat);
+var vd=document.getElementById('view-dashboard');
+if(vd&&vd.classList.contains('active')) renderDashboardContent();
 }
-}).catch(function(){syncConnected = false;syncStatus('○ 离线');});
+}).catch(function(){
+syncConnected = false;
+var el = document.getElementById('ws-status');
+updateConnectionStatus();
+});
 }
 var data = loadData();
+pollData();
 syncTimer = setInterval(pollData, 3000);
-setTimeout(pollData, 0);
 var currentCategory = 'inspire';
 var dragMode = '';
 var docContext = null;
-var CATS = {inspire:{label:'Inspire',accent:'accent-blue',color:'#2979ff'},explorer:{label:'Explorer 第一年',accent:'accent-cyan',color:'#00e5ff'},explorer2:{label:'Explorer 第二年',icon:'🧪',accent:'accent-cyan',color:'#00bcd4'},challenge:{label:'Challenge',accent:'accent-red',color:'#ff1744'}};
+var CATS = {inspire:{label:'Inspire',labelEn:'Inspire',icon:'🚀',accent:'accent-blue',color:'#2979ff'},explorer:{label:'Explorer 第一年',labelEn:'Explorer Year 1',icon:'🔭',accent:'accent-cyan',color:'#00e5ff'},explorer2:{label:'Explorer 第二年',labelEn:'Explorer Year 2',icon:'🧪',accent:'accent-cyan',color:'#00bcd4'},challenge:{label:'Challenge',labelEn:'Challenge',icon:'⚡',accent:'accent-red',color:'#ff1744'}};
+var I18N = {
+zh:{
+dashboard:"统计",print:"打印",sync:"☁ 同步到Git",syncTitle:"把课程数据同步到项目文件（用于提交到 Git）",
+back:"返回",backToCourses:"返回课程列表",chooseModule:"选择一个模块开始你的旅程",
+inspireDesc:"灵感 · 启蒙 · 创造的火花",explorer1:"Explorer 第一年",explorer1Desc:"探索 · 基础 · 入门实践",explorer2:"Explorer 第二年",explorer2Desc:"探索 · 进阶 · 深入实践",challengeDesc:"挑战 · 突破 · 极限的超越",
+savedSummary:"◆ 共 {count} 个课程已保存",courseList:"课程列表",searchPlaceholder:"搜索课程...",namePlaceholder:"输入课程名称...",
+save:"保存",open:"打开",delete:"删除",addCourse:"添加课程",addTheme:"添加主题",addCourseHere:"在此处添加课程",addThemeHere:"在此处添加新主题",lessonUnit:"节课",deleteThemeTitle:"删除该主题",deleteThemeConfirm:"删除主题「{name}」？其中的课程会移入上一个主题。",deleteCourseConfirm:"确定要删除「{name}」吗？",
+empty:"空",savedShort:"已存",saved:"已保存",sorted:"已排序",themeSaved:"主题已保存",themeMoved:"主题已移动",themeDeleted:"主题已删除，课程已移入上一主题",unnamedTheme:"未命名主题",themePrefix:"主题",newThemePrompt:"输入新主题名称：",newCourse:"新课程",untitled:"(未命名)",notFilled:"(未填写)",
+courseInfo:"课程信息",courseName:"课程名称",courseSubtitle:"课程副标题",courseEquipment:"课程使用器材",nameInputPlaceholder:"输入课程名称",subtitlePlaceholder:"输入副标题",equipmentPlaceholder:"例如: MakeX 机器人套件",objectives:"课程目标",objectivesPlaceholder:"描述本课程的学习目标...",procedure:"课程基本流程",procedurePlaceholder:"分步骤描述课程流程...",ppts:"PPT 附件",dropHint:"将 PPT 拖到这里，或点击选择文件",dropSupport:"支持 .ppt / .pptx",
+cancel:"取消",smartPasteBtn:"📋 智能粘贴",saveDataBtn:"💾 保存数据",generateImageBtn:"🖼️ 生成图片",downloadDocBtn:"📥 保存并下载文档",dataSaved:"数据已保存",
+pasteTitle:"📋 智能粘贴",pasteContent:"粘贴课程内容",pasteAutoFill:"，系统将自动识别并填入对应区域。",supportedFormats:"支持格式：",courseKeyContent:"课程关键内容",courseEquipmentKey:"课程需要器材/设备/资料",parseFillBtn:"🔄 解析并填充",pastePlaceholder:"在此粘贴课程内容...\n\n可填写课程关键内容、课程目标、课程需要器材和课程基本流程。",pleasePaste:"请先粘贴内容",recognized:"已识别并填充 {count} 个字段",
+imageLeft:"左对齐",imageCenter:"居中",imageRight:"右对齐",fontSizeDown:"减小字号",fontSizeUp:"增大字号",bold:"加粗",imageCopied:"图片已复制到剪贴板",imageDownloaded:"图片已下载到本地（浏览器限制，无法直接复制到剪贴板）",
+statsTitle:"📊 统计数据",total:"总计",filled:"已填",blank:"空白",completion:"完成率",searchNoResults:"无匹配结果",online:"● 在线",offline:"○ 离线",autoSave:"自动保存",shortcutHint:"Ctrl+S 保存 · Ctrl+P 打印 · Ctrl+F 搜索",
+uploadSaved:"PPT 已保存",synced:"✅ 已同步到项目文件",syncFailed:"同步失败",serverStartHint:"本地服务器未启动，请用桌面图标打开",openDocFirst:"请先打开一个文档",saveFailed:"保存失败",saveServerFailed:"保存失败，请确认本地服务器已启动",serverOffline:"无法连接本地服务器，请确认已通过桌面图标启动",responseError:"响应错误",attachmentRemoved:"已移除附件",storageLocation:"储存位置：",
+printTitle:"MakeX 课程表",nameHeader:"名称",equipmentHeader:"器材",createdAt:"创建时间"
+},
+en:{
+dashboard:"Stats",print:"Print",sync:"☁ Sync to Git",syncTitle:"Save course data to the project file for Git",
+back:"Back",backToCourses:"Back to Courses",chooseModule:"Choose a module to begin",
+inspireDesc:"Inspiration · Discovery · Creativity",explorer1:"Explorer Year 1",explorer1Desc:"Explore · Fundamentals · Practice",explorer2:"Explorer Year 2",explorer2Desc:"Explore · Advanced · Build",challengeDesc:"Challenge · Breakthrough · Beyond",
+savedSummary:"◆ {count} courses saved",courseList:"Course List",searchPlaceholder:"Search courses...",namePlaceholder:"Enter course name...",
+save:"Save",open:"Open",delete:"Delete",addCourse:"Add Course",addTheme:"Add Theme",addCourseHere:"Add course here",addThemeHere:"Add theme here",lessonUnit:"lessons",deleteThemeTitle:"Delete theme",deleteThemeConfirm:"Delete theme '{name}'? Its courses will move to the previous theme.",deleteCourseConfirm:"Delete '{name}'?",
+empty:"Empty",savedShort:"Saved",saved:"Saved",sorted:"Sorted",themeSaved:"Theme saved",themeMoved:"Theme moved",themeDeleted:"Theme deleted; its courses moved to the previous theme",unnamedTheme:"Untitled theme",themePrefix:"Theme",newThemePrompt:"Enter a new theme name:",newCourse:"New Course",untitled:"(Untitled)",notFilled:"(Not filled)",
+courseInfo:"Course Information",courseName:"Course Name",courseSubtitle:"Course Subtitle",courseEquipment:"Course Materials",nameInputPlaceholder:"Enter course name",subtitlePlaceholder:"Enter subtitle",equipmentPlaceholder:"e.g. MakeX Robotics Kit",objectives:"Course Objectives",objectivesPlaceholder:"Describe the learning objectives...",procedure:"Course Procedure",procedurePlaceholder:"Describe the lesson steps...",ppts:"PPT Attachments",dropHint:"Drop a PPT here, or click to choose a file",dropSupport:"Supports .ppt / .pptx",
+cancel:"Cancel",smartPasteBtn:"📋 Smart Paste",saveDataBtn:"💾 Save Data",generateImageBtn:"🖼️ Generate Image",downloadDocBtn:"📥 Save & Download",dataSaved:"Data saved",
+pasteTitle:"📋 Smart Paste",pasteContent:"Paste course content",pasteAutoFill:", and the system will fill the matching fields automatically.",supportedFormats:"Supported sections: ",courseKeyContent:"Course Key Content",courseEquipmentKey:"Course Materials / Equipment / Resources",parseFillBtn:"🔄 Parse & Fill",pastePlaceholder:"Paste course content here...\n\nCourse Key Content, Objectives, Materials, and Procedure are supported.",pleasePaste:"Please paste some content first",recognized:"Recognized and filled {count} fields",
+imageLeft:"Align left",imageCenter:"Center",imageRight:"Align right",fontSizeDown:"Decrease font size",fontSizeUp:"Increase font size",bold:"Bold",imageCopied:"Image copied to clipboard",imageDownloaded:"Image downloaded because the browser blocked clipboard access",
+statsTitle:"📊 Statistics",total:"Total",filled:"Filled",blank:"Blank",completion:"Completion",searchNoResults:"No matching courses",online:"● Online",offline:"○ Offline",autoSave:"Auto-save",shortcutHint:"Ctrl+S Save · Ctrl+P Print · Ctrl+F Search",
+uploadSaved:"PPT saved",synced:"✅ Synced to project file",syncFailed:"Sync failed",serverStartHint:"The local server is not running. Open MakeX from the desktop shortcut.",openDocFirst:"Open a course first",saveFailed:"Save failed",saveServerFailed:"Save failed. Make sure the local server is running.",serverOffline:"Cannot reach the local server. Open MakeX from the desktop shortcut.",responseError:"Invalid server response",attachmentRemoved:"Attachment removed",storageLocation:"Location: ",
+printTitle:"MakeX Curriculum",nameHeader:"Name",equipmentHeader:"Equipment",createdAt:"Created"
+}
+};
+var currentLang=(function(){try{return localStorage.getItem("makex_lang")==="en"?"en":"zh"}catch(e){return "zh"}})();
+function tr(k){var pack=I18N[currentLang]||I18N.zh;return pack[k]!==undefined?pack[k]:(I18N.zh[k]!==undefined?I18N.zh[k]:k)}
+function trf(k,values){return tr(k).replace(/\{(\w+)\}/g,function(_,key){return values&&values[key]!==undefined?values[key]:""})}
+function uiLocale(){return currentLang==="en"?"en-US":"zh-CN"}
+function escapeHtml(v){return String(v||"").replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]})}
+function lessonText(n){if(currentLang==="en")return n+" lesson"+(n===1?"":"s");return n+" 节课"}
+function catLabel(cat){var c=CATS[cat]||{};return currentLang==="en"?(c.labelEn||c.label||cat):(c.label||c.labelEn||cat)}
+function updateConnectionStatus(){var el=document.getElementById("ws-status");if(el)el.textContent=syncConnected?tr("online"):tr("offline")}
+function updateSavedSummary(){var el=document.getElementById("saved-summary");if(!el)return;var count=0;var cats=["inspire","explorer","explorer2","challenge"];for(var c=0;c<cats.length;c++){var arr=data[cats[c]]||[];for(var i=0;i<arr.length;i++){if(arr[i]&&arr[i].name&&arr[i].name.trim())count++}}el.innerHTML=trf("savedSummary",{count:count})}
 
-function emptySlot(){return{name:'',subtitle:'',equipment:'',objectives:'',procedure:'',theme:''}}
+function emptySlot(){return{name:'',subtitle:'',equipment:'',objectives:'',procedure:'',theme:'',ppts:[]}}
 
 function emptySlotNamed(n){var s=emptySlot();s.name=n;return s}
 function themeArr(a){for(var i=0;i<a.length;i++){a[i].theme='主题'+(Math.floor(i/4)+1)}return a}
@@ -441,16 +492,8 @@ function loadData(){try{var r=localStorage.getItem("makex_data")||localStorage.g
 if(p&&Array.isArray(p.explorer)){var _hasEx=false;for(var _i=0;_i<p.explorer.length;_i++){if(p.explorer[_i]&&p.explorer[_i].name&&p.explorer[_i].name.trim()){_hasEx=true;break}}if(!_hasEx){var _seed=["Onshape 的学习及激光雕刻机的使用1","Onshape 的学习及激光雕刻机的使用2","Onshape 的学习及激光雕刻机的使用3","基于Onshape与激光雕刻机的螺丝量规制作","基于Onshape与激光雕刻机的齿轮的制作","认识电子元件与电路基础","搭建简单电路与LED控制（手电筒）"];for(var _j=0;_j<_seed.length;_j++){p.explorer.push(emptySlotNamed(_seed[_j]))}}}for(var _ki=0;_ki<keys.length;_ki++){var _k2=keys[_ki];if(Array.isArray(p[_k2])){for(var _si=0;_si<p[_k2].length;_si++){if(p[_k2][_si]&&typeof p[_k2][_si]==='object'&&!p[_k2][_si].theme){p[_k2][_si].theme='主题'+(Math.floor(_si/4)+1)}}}}
 return p}}catch(e){}return defaultData()}
 
-function saveData(){
-localStorage.setItem("makex_data",JSON.stringify(data));
-localStorage.setItem("makex_courses",JSON.stringify(data));
-localVersion++;
-pendingSave = true;
-localStorage.setItem('makex_pending_save','1');
-updateCounts();
-syncStatus('○ 已存本机，待同步');
-pushData();
-}
+function pushToServer(silent){try{fetch("http://localhost:3456/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)}).then(function(r){if(!silent){if(r.ok){showToast(tr("synced"))}else{showToast(tr("syncFailed"),"error")}}}).catch(function(){if(!silent)showToast(tr("serverStartHint"),"error")})}catch(e){}}
+function saveData(){localStorage.setItem("makex_data",JSON.stringify(data));localStorage.setItem("makex_courses",JSON.stringify(data));updateCounts();pushToServer(true)}
 
 function addSlot(cat){
 var arr=data[cat];
@@ -461,46 +504,123 @@ saveData();
 renderCategory(cat);
 }
 
-function deleteTheme(cat,themeName){var arr=data[cat];var themes=[];for(var i=0;i<arr.length;i++){var t=arr[i].theme;if(t&&themes.indexOf(t)===-1)themes.push(t)}var pos=themes.indexOf(themeName);var target;if(pos>0){target=themes[pos-1]}else if(themes.length>1){target=themes[1]}else{target="主题1"}for(var i=0;i<arr.length;i++){if(arr[i].theme===themeName)arr[i].theme=target}normalizeThemes(cat);saveData();renderCategory(cat);showToast("主题已删除，课程已移入上一主题")}
+function deleteTheme(cat,themeName){var arr=data[cat];var themes=[];for(var i=0;i<arr.length;i++){var t=arr[i].theme;if(t&&themes.indexOf(t)===-1)themes.push(t)}var pos=themes.indexOf(themeName);var target;if(pos>0){target=themes[pos-1]}else if(themes.length>1){target=themes[1]}else{target="主题1"}for(var i=0;i<arr.length;i++){if(arr[i].theme===themeName)arr[i].theme=target}normalizeThemes(cat);saveData();renderCategory(cat);showToast(tr('themeDeleted'))}
 function normalizeThemes(cat){var arr=data[cat];var order=[];for(var i=0;i<arr.length;i++){var t=arr[i].theme||"未分组";if(order.indexOf(t)===-1)order.push(t)}var out=[];for(var o=0;o<order.length;o++){for(var i=0;i<arr.length;i++){if((arr[i].theme||"未分组")===order[o])out.push(arr[i])}}data[cat]=out;return out}
-function moveTheme(cat,themeName,targetObj,before){var arr=data[cat];var removed=[];var kept=[];for(var i=0;i<arr.length;i++){if(arr[i].theme===themeName)removed.push(arr[i]);else kept.push(arr[i])}var ti=kept.indexOf(targetObj);if(ti<0)ti=kept.length;if(!before)ti++;var args=[ti,0].concat(removed);kept.splice.apply(kept,args);data[cat]=kept;normalizeThemes(cat);saveData();renderCategory(cat);showToast("主题已移动")}
+function moveTheme(cat,themeName,targetObj,before){var arr=data[cat];var removed=[];var kept=[];for(var i=0;i<arr.length;i++){if(arr[i].theme===themeName)removed.push(arr[i]);else kept.push(arr[i])}var ti=kept.indexOf(targetObj);if(ti<0)ti=kept.length;if(!before)ti++;var args=[ti,0].concat(removed);kept.splice.apply(kept,args);data[cat]=kept;normalizeThemes(cat);saveData();renderCategory(cat);showToast(tr('themeMoved'))}
 function addCourseToTheme(cat,themeName){var arr=data[cat];var lastIdx=-1;for(var i=0;i<arr.length;i++){if(arr[i].theme===themeName)lastIdx=i}var ns=emptySlot();ns.theme=themeName;ns.name='新课程 '+(arr.length+1);if(lastIdx>=0)arr.splice(lastIdx+1,0,ns);else arr.push(ns);saveData();renderCategory(cat)}
 function pad(n){return n<10?'0'+n:''+n}
 
 function updateCounts(){var cats=['inspire','explorer','explorer2','challenge'];for(var c=0;c<cats.length;c++){var cat=cats[c];var n=0;for(var i=0;i<data[cat].length;i++){var s=data[cat][i];if(s.name&&s.name.trim()!=='')n++}var el=document.getElementById('count-'+cat);if(el)el.textContent=n}
 var cats2=["inspire","explorer","explorer2","challenge"];for(var c2=0;c2<cats2.length;c2++){var el2=document.getElementById("total-"+cats2[c2]);if(el2)el2.textContent=data[cats2[c2]].length}
-var t=0;for(var c=0;c<cats.length;c++){for(var i=0;i<data[cats[c]].length;i++){if(data[cats[c]][i].name&&data[cats[c]][i].name.trim())t++}}var el=document.getElementById('total-saved');if(el)el.textContent=t}
+updateSavedSummary();updateConnectionStatus()}
 
 function openCategory(cat){currentCategory=cat;document.getElementById('view-main').classList.remove('active');document.getElementById('view-category').classList.add('active');renderCategory(cat)}
 function goHome(){document.getElementById('view-category').classList.remove('active');document.getElementById('view-main').classList.add('active')}
 
-function renderCategory(cat){var info=CATS[cat];document.getElementById('cat-title').textContent=info.label;document.getElementById('cat-title').className='cat-title '+info.accent;var container=document.getElementById('slot-container');container.innerHTML='';var arr=data[cat];arr=normalizeThemes(cat)
-var lastTheme='';for(var i=0;i<arr.length;i++){let idx=i;var num=pad(i+1);var slot=arr[i]||emptySlot();var val=slot.name||'';let st=slot.theme||('主题'+(Math.floor(idx/4)+1));if(!slot.theme){slot.theme=st}if(st!==lastTheme){var th=document.createElement('div');th.className='theme-header';th.draggable=true;th.dataset.theme=st;th.addEventListener('dragstart',function(e){dragMode='theme';e.dataTransfer.setData('text/plain',this.dataset.theme);this.classList.add('dragging')});th.addEventListener('dragend',function(){dragMode='';this.classList.remove('dragging');document.querySelectorAll('.theme-header.drag-over').forEach(function(e){e.classList.remove('drag-over')})});th.addEventListener('dragover',function(e){e.preventDefault();document.querySelectorAll('.theme-header.drag-over').forEach(function(e2){if(e2!==this)e2.classList.remove('drag-over')});this.classList.add('drag-over')});th.addEventListener('drop',function(e){e.preventDefault();this.classList.remove('drag-over');if(dragMode==='theme'){var tn=e.dataTransfer.getData('text/plain');if(tn&&tn!==this.dataset.theme){var k=currentCategory||'inspire';var arr=data[k];var firstIdx=-1;for(var i=0;i<arr.length;i++){if(arr[i].theme===this.dataset.theme){firstIdx=i;break}}if(firstIdx>=0)moveTheme(k,tn,arr[firstIdx],true)}}else if(dragMode==='course'){}});var thHandle=document.createElement('span');thHandle.className='th-handle';thHandle.textContent='⠿';var thText=document.createElement('span');thText.className='th-text';thText.textContent=st;thText.contentEditable=true;thText.addEventListener('blur',function(){var t=this.textContent.trim()||'未命名主题';for(var q=0;q<arr.length;q++){if(arr[q].theme===st)arr[q].theme=t}saveData();renderCategory(cat);showToast('主题已保存')});thText.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();this.blur()}});thText.addEventListener('compositionend',function(){this.blur()});var cnt=0;for(var q=0;q<arr.length;q++){if(arr[q].theme===st)cnt++}var thCount=document.createElement('span');thCount.className='th-count';thCount.textContent=cnt+' 节课';var thAdd=document.createElement('button');thAdd.className='th-add';thAdd.textContent='+ 添加课程';thAdd.onclick=function(tn){return function(){addCourseToTheme(cat,tn)}}(st);var thDel=document.createElement("button");thDel.className="th-del";thDel.textContent="×";thDel.title="删除该主题";thDel.onclick=function(tn){return function(){if(confirm("删除主题「"+tn+"」及其中的所有课程？")){deleteTheme(cat,tn)}}}(st);th.appendChild(thHandle);th.appendChild(thText);th.appendChild(thCount);th.appendChild(thDel);th.appendChild(thAdd);container.appendChild(th);lastTheme=st}var row=document.createElement('div');row.className='slot-row';row.draggable=true;row.dataset.index=idx
+function renderCategory(cat){var info=CATS[cat];document.getElementById('cat-title').textContent=catLabel(cat);document.getElementById('cat-title').className='cat-title '+info.accent;var container=document.getElementById('slot-container');container.innerHTML='';var arr=data[cat];arr=normalizeThemes(cat)
+var lastTheme='';for(var i=0;i<arr.length;i++){let idx=i;var num=pad(i+1);var slot=arr[i]||emptySlot();var val=slot.name||'';let st=slot.theme||('主题'+(Math.floor(idx/4)+1));if(!slot.theme){slot.theme=st}if(st!==lastTheme){var th=document.createElement('div');th.className='theme-header';th.draggable=true;th.dataset.theme=st;th.addEventListener('dragstart',function(e){dragMode='theme';e.dataTransfer.setData('text/plain',this.dataset.theme);this.classList.add('dragging')});th.addEventListener('dragend',function(){dragMode='';this.classList.remove('dragging');document.querySelectorAll('.theme-header.drag-over').forEach(function(e){e.classList.remove('drag-over')})});th.addEventListener('dragover',function(e){e.preventDefault();document.querySelectorAll('.theme-header.drag-over').forEach(function(e2){if(e2!==this)e2.classList.remove('drag-over')});this.classList.add('drag-over')});th.addEventListener('drop',function(e){e.preventDefault();this.classList.remove('drag-over');if(dragMode==='theme'){var tn=e.dataTransfer.getData('text/plain');if(tn&&tn!==this.dataset.theme){var k=currentCategory||'inspire';var arr=data[k];var firstIdx=-1;for(var i=0;i<arr.length;i++){if(arr[i].theme===this.dataset.theme){firstIdx=i;break}}if(firstIdx>=0)moveTheme(k,tn,arr[firstIdx],true)}}else if(dragMode==='course'){}});var thHandle=document.createElement('span');thHandle.className='th-handle';thHandle.textContent='⠿';var thText=document.createElement('span');thText.className='th-text';thText.textContent=st;thText.contentEditable=true;thText.addEventListener('blur',function(){var t=this.textContent.trim()||tr('unnamedTheme');for(var q=0;q<arr.length;q++){if(arr[q].theme===st)arr[q].theme=t}saveData();renderCategory(cat);showToast(tr('themeSaved'))});thText.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();this.blur()}});thText.addEventListener('compositionend',function(){this.blur()});var cnt=0;for(var q=0;q<arr.length;q++){if(arr[q].theme===st)cnt++}var thCount=document.createElement('span');thCount.className='th-count';thCount.textContent=lessonText(cnt);var thAdd=document.createElement('button');thAdd.className='th-add';thAdd.textContent='+ '+tr('addCourse');thAdd.onclick=function(tn){return function(){addCourseToTheme(cat,tn)}}(st);var thDel=document.createElement("button");thDel.className="th-del";thDel.textContent="×";thDel.title=tr('deleteThemeTitle');thDel.onclick=function(tn){return function(){if(confirm(trf('deleteThemeConfirm',{name:tn}))){deleteTheme(cat,tn)}}}(st);th.appendChild(thHandle);th.appendChild(thText);th.appendChild(thCount);th.appendChild(thDel);th.appendChild(thAdd);container.appendChild(th);lastTheme=st}var row=document.createElement('div');row.className='slot-row';row.draggable=true;row.dataset.index=idx
 var numEl=document.createElement('div');numEl.className='slot-num';numEl.textContent=num;row.appendChild(numEl)
-var wrap=document.createElement('div');wrap.className='slot-input-wrap';var input=document.createElement('input');input.type='text';input.className='slot-input'+(val?' saved':'');input.placeholder='输入课程名称...';input.value=val;input.dataset.index=idx
+var wrap=document.createElement('div');wrap.className='slot-input-wrap';var input=document.createElement('input');input.type='text';input.className='slot-input'+(val?' saved':'');input.placeholder=tr('namePlaceholder');input.value=val;input.dataset.index=idx
 input.addEventListener('input',function(){var idx=parseInt(this.dataset.index);arr[idx].name=this.value;saveData();if(this.value.trim()){this.classList.add('saved')}else{this.classList.remove('saved')}
 var rowEl=this.closest('.slot-row');var openBtn=rowEl.querySelector('.btn-open');if(this.value.trim()){openBtn.classList.add('active')}else{openBtn.classList.remove('active')}})
 wrap.appendChild(input);row.appendChild(wrap)
-var saveBtn=document.createElement('button');saveBtn.className='btn-icon btn-save';saveBtn.textContent='保存'
-saveBtn.addEventListener('click',function(){var v=input.value.trim();if(!v){this.textContent='空';var self=this;setTimeout(function(){self.textContent='保存'},800);return}
-saveSlotFile(cat,idx,v);this.textContent='已存';var self=this;setTimeout(function(){self.textContent='保存'},1200)})
+var saveBtn=document.createElement('button');saveBtn.className='btn-icon btn-save';saveBtn.textContent=tr('save')
+saveBtn.addEventListener('click',function(){var v=input.value.trim();if(!v){this.textContent=tr('empty');var self=this;setTimeout(function(){self.textContent=tr('save')},800);return}
+saveSlotFile(cat,idx,v);this.textContent=tr('savedShort');var self=this;setTimeout(function(){self.textContent=tr('save')},1200)})
 row.appendChild(saveBtn)
-var openBtn=document.createElement('button');openBtn.className='btn-icon btn-open active';openBtn.textContent='打开'
+var openBtn=document.createElement('button');openBtn.className='btn-icon btn-open active';openBtn.textContent=tr('open')
 openBtn.addEventListener('click',function(){openDocument(cat,idx)})
-row.appendChild(openBtn);if(true){var delBtn=document.createElement("button");delBtn.className="btn-icon btn-icon-del";delBtn.textContent="删除";delBtn.onclick=function(){if(confirm("确定要删除「"+arr[idx].name+"」吗？")){data[cat].splice(idx,1);saveData();renderCategory(cat)}};row.appendChild(delBtn)}row.addEventListener("dragstart",function(e){this.classList.add("dragging");e.dataTransfer.setData("text/plain",this.dataset.index)});row.addEventListener("dragend",function(){this.classList.remove("dragging");document.querySelectorAll(".slot-row.drag-over").forEach(function(e){e.classList.remove("drag-over")})});row.addEventListener("dragover",function(e){e.preventDefault();this.classList.add("drag-over")});row.addEventListener("drop",function(e){e.preventDefault();this.classList.remove("drag-over");var k=currentCategory||"inspire";var t=parseInt(this.dataset.index);if(dragMode==='theme'){var tn=e.dataTransfer.getData('text/plain');if(tn){var arr=data[k];if(arr[t])moveTheme(k,tn,arr[t],false)}return}var f=parseInt(e.dataTransfer.getData("text/plain"));if(f===t)return;var item=data[k].splice(f,1)[0];if(f<t)t--;var targetTheme=(data[k][t]&&data[k][t].theme)||"未分组";item.theme=targetTheme;data[k].splice(t,0,item);normalizeThemes(k);saveData();renderCategory(k);showToast("已排序")});container.appendChild(row);var insRow=document.createElement('div');insRow.className='slot-insert-row';insRow.addEventListener('dragover',function(e){e.preventDefault();this.classList.add('drag-over')});insRow.addEventListener('dragleave',function(){this.classList.remove('drag-over')});insRow.addEventListener('drop',function(e){e.preventDefault();this.classList.remove('drag-over');var k=currentCategory||'inspire';if(dragMode==='theme'){var tn=e.dataTransfer.getData('text/plain');if(tn){var arr=data[k];if(arr[idx])moveTheme(k,tn,arr[idx],false)}}else if(dragMode==='course'){var f=parseInt(e.dataTransfer.getData('text/plain'));var t=idx+1;if(f===t)return;var item=data[k].splice(f,1)[0];if(f<t)t--;var targetTheme=(data[k][t]&&data[k][t].theme)||'未分组';item.theme=targetTheme;data[k].splice(t,0,item);normalizeThemes(k);saveData();renderCategory(k);showToast('已排序')}});var insBtn=document.createElement('button');insBtn.className='slot-insert';insBtn.textContent='+';insBtn.title='在此处添加课程';insBtn.onclick=function(){var ns=emptySlot();ns.theme=(arr[idx]&&arr[idx].theme)||'未分组';ns.name='新课程 '+(arr.length+1);arr.splice(idx+1,0,ns);saveData();renderCategory(cat)};var insTheme=document.createElement('button');insTheme.className='slot-insert slot-insert-theme';insTheme.textContent='▸';insTheme.title='在此处添加新主题';insTheme.onclick=function(){var name=prompt('输入新主题名称：','主题'+(Math.floor(arr.length/4)+1));if(name&&name.trim()){var ns=emptySlot();ns.theme=name.trim();ns.name='新课程 '+(arr.length+1);arr.splice(idx+1,0,ns);saveData();renderCategory(cat)}};insRow.appendChild(insBtn);insRow.appendChild(insTheme);container.appendChild(insRow)}
+row.appendChild(openBtn);if(true){var delBtn=document.createElement("button");delBtn.className="btn-icon btn-icon-del";delBtn.textContent=tr('delete');delBtn.onclick=function(){if(confirm(trf('deleteCourseConfirm',{name:arr[idx].name}))){data[cat].splice(idx,1);saveData();renderCategory(cat)}};row.appendChild(delBtn)}row.addEventListener("dragstart",function(e){this.classList.add("dragging");e.dataTransfer.setData("text/plain",this.dataset.index)});row.addEventListener("dragend",function(){this.classList.remove("dragging");document.querySelectorAll(".slot-row.drag-over").forEach(function(e){e.classList.remove("drag-over")})});row.addEventListener("dragover",function(e){e.preventDefault();this.classList.add("drag-over")});row.addEventListener("drop",function(e){e.preventDefault();this.classList.remove("drag-over");var k=currentCategory||"inspire";var t=parseInt(this.dataset.index);if(dragMode==='theme'){var tn=e.dataTransfer.getData('text/plain');if(tn){var arr=data[k];if(arr[t])moveTheme(k,tn,arr[t],false)}return}var f=parseInt(e.dataTransfer.getData("text/plain"));if(f===t)return;var item=data[k].splice(f,1)[0];if(f<t)t--;var targetTheme=(data[k][t]&&data[k][t].theme)||"未分组";item.theme=targetTheme;data[k].splice(t,0,item);normalizeThemes(k);saveData();renderCategory(k);showToast(tr('sorted'))});container.appendChild(row);var insRow=document.createElement('div');insRow.className='slot-insert-row';insRow.addEventListener('dragover',function(e){e.preventDefault();this.classList.add('drag-over')});insRow.addEventListener('dragleave',function(){this.classList.remove('drag-over')});insRow.addEventListener('drop',function(e){e.preventDefault();this.classList.remove('drag-over');var k=currentCategory||'inspire';if(dragMode==='theme'){var tn=e.dataTransfer.getData('text/plain');if(tn){var arr=data[k];if(arr[idx])moveTheme(k,tn,arr[idx],false)}}else if(dragMode==='course'){var f=parseInt(e.dataTransfer.getData('text/plain'));var t=idx+1;if(f===t)return;var item=data[k].splice(f,1)[0];if(f<t)t--;var targetTheme=(data[k][t]&&data[k][t].theme)||'未分组';item.theme=targetTheme;data[k].splice(t,0,item);normalizeThemes(k);saveData();renderCategory(k);showToast(tr('sorted'))}});var insBtn=document.createElement('button');insBtn.className='slot-insert';insBtn.textContent='+';insBtn.title=tr('addCourseHere');insBtn.onclick=function(){var ns=emptySlot();ns.theme=(arr[idx]&&arr[idx].theme)||'未分组';ns.name='新课程 '+(arr.length+1);arr.splice(idx+1,0,ns);saveData();renderCategory(cat)};var insTheme=document.createElement('button');insTheme.className='slot-insert slot-insert-theme';insTheme.textContent='▸';insTheme.title=tr('addThemeHere');insTheme.onclick=function(){var name=prompt(tr('newThemePrompt'),tr('themePrefix')+(Math.floor(arr.length/4)+1));if(name&&name.trim()){var ns=emptySlot();ns.theme=name.trim();ns.name='新课程 '+(arr.length+1);arr.splice(idx+1,0,ns);saveData();renderCategory(cat)}};insRow.appendChild(insBtn);insRow.appendChild(insTheme);container.appendChild(insRow)}
 var rows=container.querySelectorAll('.slot-row');for(var i=0;i<rows.length;i++){(function(el,idx){el.style.opacity='0';el.style.transform='translateY(8px)';setTimeout(function(){el.style.transition='all 0.3s ease-out';el.style.opacity='1';el.style.transform='translateY(0)'},idx*20)})(rows[i],i)}
 
-var addBtn=document.createElement('div');addBtn.style.cssText='padding:12px 16px;margin-top:8px;border-radius:8px;border:2px dashed rgba(41,121,255,0.25);background:rgba(41,121,255,0.04);cursor:pointer;text-align:center;transition:all 0.25s;font-size:14px;color:#2979ff;letter-spacing:1px';addBtn.textContent='+ 添加课程';addBtn.onmouseover=function(){this.style.borderColor='rgba(41,121,255,0.5)';this.style.background='rgba(41,121,255,0.08)'};addBtn.onmouseout=function(){this.style.borderColor='rgba(41,121,255,0.25)';this.style.background='rgba(41,121,255,0.04)'};addBtn.onclick=function(){addSlot(cat)};container.appendChild(addBtn);var addThemeBtn=document.createElement('div');addThemeBtn.style.cssText='padding:10px 16px;margin-top:6px;border-radius:8px;border:2px dashed rgba(0,229,255,0.2);background:rgba(0,229,255,0.03);cursor:pointer;text-align:center;transition:all 0.25s;font-size:13px;color:var(--cyan);letter-spacing:0.5px';addThemeBtn.textContent='+ 添加主题';addThemeBtn.onmouseover=function(){this.style.borderColor='rgba(0,229,255,0.4)';this.style.background='rgba(0,229,255,0.06)'};addThemeBtn.onmouseout=function(){this.style.borderColor='rgba(0,229,255,0.2)';this.style.background='rgba(0,229,255,0.03)'};addThemeBtn.onclick=function(){var name=prompt('输入新主题名称：','主题'+(Math.floor(arr.length/4)+1));if(name&&name.trim()){var ns=emptySlot();ns.theme=name.trim();ns.name='新课程 '+(arr.length+1);arr.push(ns);saveData();renderCategory(cat)}};container.appendChild(addThemeBtn)}
+var addBtn=document.createElement('div');addBtn.style.cssText='padding:12px 16px;margin-top:8px;border-radius:8px;border:2px dashed rgba(41,121,255,0.25);background:rgba(41,121,255,0.04);cursor:pointer;text-align:center;transition:all 0.25s;font-size:14px;color:#2979ff;letter-spacing:1px';addBtn.textContent='+ '+tr('addCourse');addBtn.onmouseover=function(){this.style.borderColor='rgba(41,121,255,0.5)';this.style.background='rgba(41,121,255,0.08)'};addBtn.onmouseout=function(){this.style.borderColor='rgba(41,121,255,0.25)';this.style.background='rgba(41,121,255,0.04)'};addBtn.onclick=function(){addSlot(cat)};container.appendChild(addBtn);var addThemeBtn=document.createElement('div');addThemeBtn.style.cssText='padding:10px 16px;margin-top:6px;border-radius:8px;border:2px dashed rgba(0,229,255,0.2);background:rgba(0,229,255,0.03);cursor:pointer;text-align:center;transition:all 0.25s;font-size:13px;color:var(--cyan);letter-spacing:0.5px';addThemeBtn.textContent='+ '+tr('addTheme');addThemeBtn.onmouseover=function(){this.style.borderColor='rgba(0,229,255,0.4)';this.style.background='rgba(0,229,255,0.06)'};addThemeBtn.onmouseout=function(){this.style.borderColor='rgba(0,229,255,0.2)';this.style.background='rgba(0,229,255,0.03)'};addThemeBtn.onclick=function(){var name=prompt(tr('newThemePrompt'),tr('themePrefix')+(Math.floor(arr.length/4)+1));if(name&&name.trim()){var ns=emptySlot();ns.theme=name.trim();ns.name='新课程 '+(arr.length+1);arr.push(ns);saveData();renderCategory(cat)}};container.appendChild(addThemeBtn)}
 
 
 /* ===== GENERATE IMAGE ===== */
+function normalizeEditorText(t){return String(t||"").replace(/\r\n?/g,"\n").replace(/[\u2028\u2029]/g,"\n").replace(/\u00a0/g," ").replace(/[ \t]+\n/g,"\n").replace(/\n[ \t]+/g,"\n").replace(/\n{3,}/g,"\n\n").replace(/^\s+|\s+$/g,"")}
+function editorText(id){var el=document.getElementById(id);if(!el)return "";var h=el.innerHTML||"";if(!h)return "";var converted="";var decoded=h.replace(/<br\s*\/?>/gi,"\n").replace(/<\/(div|p|li|h[1-6]|tr)>/gi,"\n").replace(/<(div|p|li|h[1-6]|tr)[^>]*>/gi,"").replace(/<[^>]+>/g,"");var ta=document.createElement("textarea");ta.innerHTML=decoded;converted=normalizeEditorText(ta.value);var visible=normalizeEditorText(el.innerText||"");var convertedLines=(converted.match(/\n/g)||[]).length;var visibleLines=(visible.match(/\n/g)||[]).length;return visible&&(!converted||visibleLines>convertedLines)?visible:converted}
+var activeRichEditor=null;
+var savedRichRange=null;
+function richToolbarMousedown(e){if(e.target.closest("button"))e.preventDefault();return false}
+function getRichEditorForNode(node){if(!node)return null;var el=node.nodeType===1?node:node.parentElement;return el?el.closest(".doc-editor"):null}
+function syncRichSelection(){var sel=window.getSelection();if(!sel||!sel.rangeCount)return;var editor=getRichEditorForNode(sel.anchorNode);if(!editor)return;activeRichEditor=editor;savedRichRange=sel.getRangeAt(0).cloneRange();updateRichToolbarState(editor)}
+function restoreRichRange(editor){var sel=window.getSelection();if(savedRichRange&&editor.contains(savedRichRange.startContainer)&&editor.contains(savedRichRange.endContainer)){sel.removeAllRanges();sel.addRange(savedRichRange);return sel.getRangeAt(0).cloneRange()}return null}
+function getRichNode(editor,range){var n=range&&range.startContainer?range.startContainer:editor;var el=n.nodeType===1?n:n.parentElement;return el&&editor.contains(el)?el:editor}
+function getRichStyle(editor,range){var el=getRichNode(editor,range);var cs=window.getComputedStyle(el);return{size:Math.max(8,Math.min(72,Math.round(parseFloat(cs.fontSize)||14))),bold:parseInt(cs.fontWeight,10)>=600||cs.fontWeight==="bold"}}
+function updateRichToolbarState(editor){editor=editor||activeRichEditor;if(!editor)return;var sel=window.getSelection();var range=sel&&sel.rangeCount?sel.getRangeAt(0):null;if(range&&!editor.contains(range.startContainer))range=null;var style=getRichStyle(editor,range);var value=document.querySelector('[data-rich-size-value="'+editor.id+'"]');if(value)value.textContent=style.size;var toolbar=document.querySelector('.rich-toolbar[data-editor="'+editor.id+'"]');if(toolbar){var boldBtn=toolbar.querySelector('[data-rich-action="bold"]');if(boldBtn)boldBtn.classList.toggle("active",style.bold)}}
+function ensureRichRoot(editor){var root=null;for(var i=0;i<editor.children.length;i++){if(editor.children[i].getAttribute("data-rich-root")==="1"){root=editor.children[i];break}}if(!root){root=document.createElement("div");root.setAttribute("data-rich-root","1");while(editor.firstChild)root.appendChild(editor.firstChild);editor.appendChild(root)}return root}
+function selectRichRoot(editor,root){var sel=window.getSelection();var next=document.createRange();next.selectNodeContents(root||editor);sel.removeAllRanges();sel.addRange(next);savedRichRange=next.cloneRange()}
+function wrapRichRange(range,styles){var span=document.createElement("span");for(var key in styles)span.style[key]=styles[key];try{range.surroundContents(span)}catch(e){var frag=range.extractContents();span.appendChild(frag);range.insertNode(span)}var sel=window.getSelection();var next=document.createRange();next.selectNodeContents(span);sel.removeAllRanges();sel.addRange(next);savedRichRange=next.cloneRange();return span}
+function applyRichAction(editorId,action){var editor=document.getElementById(editorId);if(!editor)return;activeRichEditor=editor;var range=restoreRichRange(editor);var selected=!!(range&&!range.collapsed);if(!range){range=document.createRange();range.selectNodeContents(editor);selected=false}var style=getRichStyle(editor,range);if(action==="bold"){if(selected){wrapRichRange(range,{fontWeight:style.bold?"normal":"700"})}else{var root=ensureRichRoot(editor);root.style.fontWeight=style.bold?"normal":"700";selectRichRoot(editor,root)}}else{var nextSize=Math.max(8,Math.min(72,style.size+(action==="size-down"?-2:2)));if(selected){wrapRichRange(range,{fontSize:nextSize+"px"})}else{var fieldRoot=ensureRichRoot(editor);fieldRoot.style.fontSize=nextSize+"px";selectRichRoot(editor,fieldRoot)}}saveDocumentData();updateRichToolbarState(editor)}
+document.addEventListener("selectionchange",syncRichSelection);
+document.addEventListener("focusin",function(e){var editor=e.target.closest?e.target.closest(".doc-editor"):null;if(editor){activeRichEditor=editor;updateRichToolbarState(editor)}});
+document.addEventListener("click",function(e){var btn=e.target.closest?e.target.closest("[data-rich-action]"):null;if(!btn)return;e.preventDefault();var toolbar=btn.closest(".rich-toolbar");if(toolbar)applyRichAction(toolbar.dataset.editor,btn.dataset.richAction)});
+function extractRichLines(id){
+var root=document.getElementById(id);if(!root)return [];
+var base=window.getComputedStyle(root);var baseStyle={size:parseFloat(base.fontSize)||14,bold:parseInt(base.fontWeight,10)>=600||base.fontWeight==="bold"};
+var lines=[[]];
+function breakLine(){if(lines[lines.length-1].length)lines.push([])}
+function addRun(text,style){if(!text)return;var current=lines[lines.length-1];var last=current[current.length-1];if(last&&last.size===style.size&&last.bold===style.bold){last.text+=text}else{current.push({text:text,size:style.size,bold:style.bold})}}
+function addText(value,style){var parts=String(value||"").replace(/\r/g,"").split("\n");for(var i=0;i<parts.length;i++){if(i>0)lines.push([]);addRun(parts[i],style)}}
+function walk(node,inherited){
+if(node.nodeType===3){addText(node.nodeValue,inherited);return}
+if(node.nodeType!==1)return;
+var tag=node.tagName;
+if(tag==="BR"){lines.push([]);return}
+if(/^(SCRIPT|STYLE)$/.test(tag))return;
+var cs=window.getComputedStyle(node);
+if(cs.display==="none")return;
+var size=parseFloat(cs.fontSize)||inherited.size;
+var bold=cs.fontWeight==="bold"||parseInt(cs.fontWeight,10)>=600;
+var style={size:size,bold:bold};
+var block=/^(DIV|P|LI|UL|OL|H[1-6]|TR|BLOCKQUOTE)$/.test(tag);
+if(block)breakLine();
+for(var i=0;i<node.childNodes.length;i++)walk(node.childNodes[i],style);
+if(block)lines.push([])
+}
+for(var i=0;i<root.childNodes.length;i++)walk(root.childNodes[i],baseStyle);
+while(lines.length&&!lines[lines.length-1].length)lines.pop();
+var compact=[];for(var j=0;j<lines.length;j++){if(!lines[j].length&&compact.length&&!compact[compact.length-1].length)continue;compact.push(lines[j])}
+if(!compact.length)compact.push([{text:tr("notFilled"),size:14,bold:false}]);
+return compact
+}
+function richFont(run){return (run.bold?"bold ":"")+Math.max(8,Math.round(run.size))+'px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'}
+function layoutRichLines(lines,maxWidth,ctx){
+var out=[];
+for(var i=0;i<lines.length;i++){
+var source=lines[i];
+if(!source.length){out.push({runs:[],maxSize:14});continue}
+var current={runs:[],width:0,maxSize:14};
+for(var r=0;r<source.length;r++){
+var run=source[r];var chars=Array.from(run.text||"");
+for(var c=0;c<chars.length;c++){
+var ch=chars[c];ctx.font=richFont(run);var w=ctx.measureText(ch).width;
+if(current.width+w>maxWidth&&current.runs.length){out.push(current);current={runs:[],width:0,maxSize:14}}
+var last=current.runs[current.runs.length-1];
+if(last&&last.size===run.size&&last.bold===run.bold){last.text+=ch}else{current.runs.push({text:ch,size:run.size,bold:run.bold})}
+current.width+=w;current.maxSize=Math.max(current.maxSize,run.size)
+}}
+if(current.runs.length)out.push(current)
+}
+return out
+}
+function richLineHeight(line){return line.runs&&line.runs.length?Math.max(20,Math.ceil(line.maxSize*1.55)):9}
+function richLayoutHeight(layout){var h=0;for(var i=0;i<layout.length;i++)h+=richLineHeight(layout[i]);return h}
+function drawRichLines(layout,x,y,maxWidth,color,context){
+var drawCtx=context;
+drawCtx.textBaseline="top";
+for(var i=0;i<layout.length;i++){
+var line=layout[i];var xx=x;
+if(line.runs&&line.runs.length){for(var r=0;r<line.runs.length;r++){var run=line.runs[r];drawCtx.font=richFont(run);drawCtx.fillStyle=color;drawCtx.fillText(run.text,xx,y);xx+=drawCtx.measureText(run.text).width}}
+y+=richLineHeight(line)
+}
+drawCtx.textBaseline="alphabetic";return y
+}
 function generateImage(){
-if(!docContext){alert('请先打开一个文档');return}
+if(!docContext){alert(tr('openDocFirst'));return}
 saveDocumentData()
-var slot=data[docContext.cat][docContext.index];var info=CATS[docContext.cat];var sn=pad(docContext.index+1)
-var name=slot.name||'(未命名)';var subtitle=slot.subtitle||'';var eq=slot.equipment||''
-var obj=(document.getElementById('doc-objectives').textContent||'').trim()
-var pro=(document.getElementById('doc-procedure').textContent||'').trim()
+var slot=data[docContext.cat][docContext.index];var info=CATS[docContext.cat];var infoLabel=catLabel(docContext.cat);var sn=pad(docContext.index+1)
+var name=slot.name||tr('untitled');var subtitle=slot.subtitle||'';var eq=slot.equipment||''
 var W=800;var p=36;var cw=W-p*2;var lh=24;var catColor=info.color
 
 function wrapH(text,maxW,font,lh2){
@@ -514,11 +634,13 @@ return total}
 var tmpC=document.createElement('canvas');var tctx=tmpC.getContext('2d')
 tctx.font='14px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
 var fw=cw-24-24
-function fh(v,mw){return 14+Math.max(wrapH(v||'(未填写)',mw,tctx,lh),lh)}
+var objLines=layoutRichLines(extractRichLines('doc-objectives'),fw,tctx)
+var proLines=layoutRichLines(extractRichLines('doc-procedure'),fw,tctx)
+function fh(v,mw){return 14+Math.max(wrapH(v||tr('notFilled'),mw,tctx,lh),lh)}
 var hh=82
 var infoH=20+fh(name,fw)+fh(subtitle,fw)+fh(eq,fw)+8
-var objH=20+Math.max(wrapH(obj||'(未填写)',fw,tctx,lh),lh)+8
-var proH=20+Math.max(wrapH(pro||'(未填写)',fw,tctx,lh),lh)
+var objH=20+Math.max(richLayoutHeight(objLines),lh)+8
+var proH=20+Math.max(richLayoutHeight(proLines),lh)
 var minFooterY=Math.max(200,82+hh+infoH+objH+proH+80);var H=8000;
 
 var cv=document.createElement('canvas');cv.width=W;cv.height=H;var cx=cv.getContext('2d')
@@ -602,7 +724,7 @@ cx.fillStyle=tg2;cx.fillText(name,x,ypos+30);ypos+=40
 // Category badge
 cx.font='11px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
 cx.fillStyle=catColor+'88'
-var badge=info.label+' · Slot '+sn
+var badge=infoLabel+' · Slot '+sn
 cx.fillText(badge,x,ypos+4);ypos+=10
 
 // Divider
@@ -611,28 +733,28 @@ cx.beginPath();cx.moveTo(x,ypos+12);cx.lineTo(x+cw-48,ypos+12);cx.stroke();cx.se
 ypos+=28
 
 // Section 1: 课程信息
-ypos=secLabel('课程信息',x,ypos,catColor)
-ypos=drawField('课程名称',name,x,ypos,cw-24-24,catColor)
-ypos=drawField('课程副标题',subtitle||'(未填写)',x,ypos,cw-24-24,'#c0c8d4')
-ypos=drawField('课程使用器材',eq||'(未填写)',x,ypos,cw-24-24,'#c0c8d4')
+ypos=secLabel(tr('courseInfo'),x,ypos,catColor)
+ypos=drawField(tr('courseName'),name,x,ypos,cw-24-24,catColor)
+ypos=drawField(tr('courseSubtitle'),subtitle||tr('notFilled'),x,ypos,cw-24-24,'#c0c8d4')
+ypos=drawField(tr('courseEquipment'),eq||tr('notFilled'),x,ypos,cw-24-24,'#c0c8d4')
 ypos+=8
 
 // Section 2: 课程目标
-ypos=secLabel('课程目标',x,ypos,catColor)
-ypos=drawText(obj||'(未填写)',x,ypos,cw-24-24,'#e0e4ea',14)
+ypos=secLabel(tr('objectives'),x,ypos,catColor)
+ypos=drawRichLines(objLines,x,ypos,cw-24-24,'#e0e4ea',cx)
 ypos+=8
 
 // Section 3: 课程基本流程
-ypos=secLabel('课程基本流程',x,ypos,catColor)
-ypos=drawText(pro||'(未填写)',x,ypos,cw-24-24,'#e0e4ea',14)
+ypos=secLabel(tr('procedure'),x,ypos,catColor)
+ypos=drawRichLines(proLines,x,ypos,cw-24-24,'#e0e4ea',cx)
 
 // Footer
 ypos=Math.max(ypos+24,Math.max(200,82+hh+infoH+objH+proH+80))
 cx.strokeStyle='rgba(41,121,255,0.06)';cx.lineWidth=1
 cx.beginPath();cx.moveTo(x,ypos);cx.lineTo(x+cw-48,ypos);cx.stroke()
 cx.font='11px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';cx.fillStyle='#556688'
-var now=new Date();var ds=now.toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'})
-cx.fillText(ds+' · MakeX · '+info.label,x,ypos+20)
+var now=new Date();var ds=now.toLocaleDateString(uiLocale(),{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'})
+cx.fillText(ds+' · MakeX · '+infoLabel,x,ypos+20)
 
 // 根据实际绘制位置扩展 canvas（防止内容被截断）
 if(ypos+50>H){
@@ -649,12 +771,12 @@ var finalH=Math.min(Math.ceil(ypos+80),H);if(finalH<H){var cc=document.createEle
 // Copy to clipboard
 cv.toBlob(function(blob){
 navigator.clipboard.write([new ClipboardItem({'image/png':blob})])
-.then(function(){alert('图片已复制到剪贴板 ?')})
+.then(function(){alert(tr('imageCopied'))})
 .catch(function(){
 var a=document.createElement('a');a.href=cv.toDataURL('image/png')
 a.download='makex_'+info.label.toLowerCase()+'_'+sn+'.png'
 document.body.appendChild(a);a.click();document.body.removeChild(a)
-alert('图片已下载到本地（浏览器限制，无法直接复制到剪贴板）')})})}
+alert(tr('imageDownloaded'))})})}
 /* ===== IMAGE TOOLBAR ===== */
 var selectedImg=null;
 document.addEventListener('click',function(e){
@@ -677,7 +799,7 @@ function imgDelete(){if(!selectedImg)return;selectedImg.remove();hideImgToolbar(
 function openSmartPaste(){document.getElementById('paste-textarea').value='';document.getElementById('paste-overlay').classList.add('open')}
 function closeSmartPaste(e){if(e&&e.target!==e.currentTarget)return;document.getElementById('paste-overlay').classList.remove('open')}
 
-function doSmartPaste(){var text=document.getElementById('paste-textarea').value;if(!text.trim()){alert('请先粘贴内容');return}
+function doSmartPaste(){var text=document.getElementById('paste-textarea').value;if(!text.trim()){alert(tr('pleasePaste'));return}
 var fields={name:'',subtitle:'',equipment:'',objectives:'',procedure:''}
 var rules=[
 {keys:['课程副标题','副标题'],field:'subtitle'},
@@ -731,36 +853,42 @@ if(fields.equipment){document.getElementById('doc-equipment').value=fields.equip
 if(fields.objectives){document.getElementById('doc-objectives').textContent=fields.objectives;count++}
 if(fields.procedure){document.getElementById('doc-procedure').textContent=fields.procedure;count++}
 document.getElementById('paste-overlay').classList.remove('open')
-alert('已识别并填充 '+count+' 个字段')}function saveSlotFile(cat,index,name){var safeName=name.replace(/[<>:"\\/|?*]/g,'_').trim()||'untitled';var catLabel=CATS[cat].label.toLowerCase();var slotNum=pad(index+1);var filename='makex_'+catLabel+'_'+slotNum+'_'+safeName+'.txt'
+alert(trf('recognized',{count:count}))}function saveSlotFile(cat,index,name){var safeName=name.replace(/[<>:"\\/|?*]/g,'_').trim()||'untitled';var catLabel=CATS[cat].label.toLowerCase();var slotNum=pad(index+1);var filename='makex_'+catLabel+'_'+slotNum+'_'+safeName+'.txt'
 var content='[MakeX] '+CATS[cat].label+' - Slot '+slotNum+'\n课程名称: '+name+'\n创建时间: '+new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})+'\n---\n'+name+'\n'
 var blob=new Blob([content],{type:'text/plain;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
 
 /* ===== DOCUMENT EDITOR ===== */
 function openDocument(cat,index){docContext={cat:cat,index:index};var slot=data[cat][index];var info=CATS[cat];var slotNum=pad(index+1)
-document.getElementById('doc-badge').textContent=info.label+' · '+slotNum
-document.getElementById('doc-title-display').textContent=slot.name||'新课程'
+document.getElementById('doc-badge').textContent=catLabel(cat)+' · '+slotNum
+document.getElementById('doc-title-display').textContent=slot.name||tr('newCourse')
 document.getElementById('doc-name').value=slot.name||''
 document.getElementById('doc-subtitle').value=slot.subtitle||''
 document.getElementById('doc-equipment').value=slot.equipment||''
 document.getElementById('doc-objectives').innerHTML=slot.objectives||''
-document.getElementById('doc-procedure').innerHTML=slot.procedure||''
+document.getElementById('doc-procedure').innerHTML=slot.procedure||'';renderPpts()
 document.getElementById('view-category').classList.remove('active')
-document.getElementById('view-document').classList.add('active')}
+document.getElementById('view-document').classList.add('active');applyLang(currentLang)}
 
 function closeDocument(){saveDocumentData();document.getElementById('view-document').classList.remove('active');document.getElementById('view-category').classList.add('active');renderCategory(docContext.cat);docContext=null}
 
 function saveDocumentData(){if(!docContext)return;var slot=data[docContext.cat][docContext.index];slot.name=document.getElementById('doc-name').value;slot.subtitle=document.getElementById('doc-subtitle').value;slot.equipment=document.getElementById('doc-equipment').value;slot.objectives=document.getElementById('doc-objectives').innerHTML;slot.procedure=document.getElementById('doc-procedure').innerHTML;saveData()}
 
-function downloadDocument(){saveDocumentData();if(!docContext)return;var slot=data[docContext.cat][docContext.index];var cat=docContext.cat;var index=docContext.index;var info=CATS[cat];var slotNum=pad(index+1);var safeName=(slot.name||'untitled').replace(/[<>:"\\/|?*]/g,'_').trim()||'untitled';var filename='makex_'+info.label.toLowerCase()+'_'+slotNum+'_'+safeName+'.txt'
-var line=function(t){return t+'\n'};var sep=function(){return'────────────────────────────────────\n'}
-var content=''
-content+=sep();content+=line('  MakeX '+info.label+' · Slot '+slotNum);content+=line('  '+ (slot.name||'(未命名)'));content+=sep()
-content+=line('\n【课程名称】'+ (slot.name||''));content+=line('【副标题】'+ (slot.subtitle||''));content+=line('【使用器材】'+ (slot.equipment||''));
-content+=line('\n━━━ 课程目标 ━━━\n');content+=line((document.getElementById('doc-objectives').textContent||'(未填写)'))
-content+=line('\n━━━ 课程基本流程 ━━━\n');content+=line((document.getElementById('doc-procedure').textContent||'(未填写)'))
-content+=line('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');content+=line('创建时间: '+new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}));content+=line('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-var blob=new Blob([content],{type:'text/plain;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
-
+function downloadDocument(){
+saveDocumentData();
+if(!docContext)return;
+var slot=data[docContext.cat][docContext.index];var cat=docContext.cat;var index=docContext.index;var slotNum=pad(index+1);var infoLabel=catLabel(cat);
+var safeName=(slot.name||tr('untitled')).replace(/[<>:"\\/|?*]/g,'_').trim()||'untitled';
+var filename='makex_'+infoLabel.toLowerCase()+'_'+slotNum+'_'+safeName+'.txt';
+var line=function(value){return value+'\n'};
+var sep=function(){return'────────────────────────────────────\n'};
+var content='';
+content+=sep();content+=line('  MakeX '+infoLabel+' · Slot '+slotNum);content+=line('  '+(slot.name||tr('untitled')));content+=sep();
+content+=line('\n['+tr('courseName')+'] '+(slot.name||''));content+=line('['+tr('courseSubtitle')+'] '+(slot.subtitle||''));content+=line('['+tr('courseEquipment')+'] '+(slot.equipment||''));
+content+=line('\n━━━ '+tr('objectives')+' ━━━\n');content+=line(editorText('doc-objectives')||tr('notFilled'));
+content+=line('\n━━━ '+tr('procedure')+' ━━━\n');content+=line(editorText('doc-procedure')||tr('notFilled'));
+content+=line('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');content+=line(tr('createdAt')+': '+new Date().toLocaleString(uiLocale(),{timeZone:'Asia/Shanghai'}));content+=line('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+var blob=new Blob([content],{type:'text/plain;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)
+}
 updateCounts();
 
 /* === NEW FEATURES === */
@@ -769,23 +897,89 @@ function getTheme(){return localStorage.getItem("makex_theme")||"dark"}
 function applyTheme(t){if(t==="light")document.documentElement.classList.add("light");else document.documentElement.classList.remove("light");localStorage.setItem("makex_theme",t)}
 function toggleTheme(){var t=getTheme();applyTheme(t==="light"?"dark":"light")}
 
-var I18N={zh:{dashboard:"统计",print:"打印",back:"返回",namePlaceholder:"输入课程名称...",searchPlaceholder:"搜索课程...",save:"保存",open:"打开",addCourse:"+ 添加课程",courseList:"课程列表"},en:{dashboard:"Stats",print:"Print",back:"Back",namePlaceholder:"Enter course name...",searchPlaceholder:"Search courses...",save:"Save",open:"Open",addCourse:"+ Add Course",courseList:"Course List"}};
-function toggleLang(){var cur=localStorage.getItem("makex_lang")||"zh";var next=cur==="zh"?"en":"zh";localStorage.setItem("makex_lang",next);applyLang(next)}
-function applyLang(l){var t=I18N[l]||I18N.zh;var b=document.getElementById("btn-lang");if(b)b.textContent=l==="zh"?"中文":"EN";var d=document.getElementById("btn-dash");if(d)d.innerHTML="📊 "+t.dashboard;var pb=document.getElementById("btn-print");if(pb)pb.innerHTML="🖨️ "+t.print;var bk=document.querySelectorAll(".btn-back");for(var i=0;i<bk.length;i++){var s=bk[i].querySelector("[data-i18n]");if(s)s.textContent=t.back}var si=document.querySelectorAll(".slot-input");for(var i=0;i<si.length;i++){if(si[i].placeholder)si[i].placeholder=t.namePlaceholder}var sv=document.querySelectorAll(".btn-save");for(var i=0;i<sv.length;i++){sv[i].textContent=t.save}var op=document.querySelectorAll(".btn-open");for(var i=0;i<op.length;i++){op[i].textContent=t.open}var ci=document.querySelector(".cat-slot-info");if(ci)ci.textContent=t.courseList;var sh=document.getElementById("search-input");if(sh)sh.placeholder=t.searchPlaceholder;var ac=document.getElementById("add-course-btn");if(ac)ac.textContent=t.addCourse}
+function toggleLang(){currentLang=currentLang==="zh"?"en":"zh";try{localStorage.setItem("makex_lang",currentLang)}catch(e){}applyLang(currentLang)}
+function applyLang(lang){
+currentLang=lang==='en'?'en':'zh';
+document.documentElement.lang=currentLang==='en'?'en':'zh-CN';
+var i,el,key;
+var nodes=document.querySelectorAll('[data-i18n]');
+for(i=0;i<nodes.length;i++){key=nodes[i].getAttribute('data-i18n');if(key)nodes[i].textContent=tr(key)}
+var placeholders=document.querySelectorAll('[data-i18n-placeholder]');
+for(i=0;i<placeholders.length;i++){key=placeholders[i].getAttribute('data-i18n-placeholder');if(!key)continue;var value=tr(key);if(placeholders[i].hasAttribute('contenteditable'))placeholders[i].setAttribute('data-placeholder',value);else placeholders[i].setAttribute('placeholder',value)}
+var titles=document.querySelectorAll('[data-i18n-title]');
+for(i=0;i<titles.length;i++){key=titles[i].getAttribute('data-i18n-title');if(key)titles[i].setAttribute('title',tr(key))}
+var b=document.getElementById('btn-lang');if(b)b.textContent=currentLang==='zh'?'中文':'EN';
+var d=document.getElementById('btn-dash');if(d)d.innerHTML='📊 '+tr('dashboard');
+var pb=document.getElementById('btn-print');if(pb)pb.innerHTML='🖨️ '+tr('print');
+var sb=document.getElementById('btn-sync');if(sb){sb.textContent=tr('sync');sb.title=tr('syncTitle')}
+updateConnectionStatus();updateSavedSummary();
+var vc=document.getElementById('view-category');
+if(vc&&vc.classList.contains('active')&&currentCategory)renderCategory(currentCategory);
+var vdoc=document.getElementById('view-document');
+if(vdoc&&vdoc.classList.contains('active'))renderPpts();
+var vd=document.getElementById('view-dashboard');
+if(vd&&vd.classList.contains('active'))renderDashboardContent();
+}
 function setLang(l){applyLang(l)}
 try{var savedLang=localStorage.getItem("makex_lang");if(savedLang){applyLang(savedLang);var bl=document.getElementById("btn-lang");if(bl)bl.textContent=savedLang==="zh"?"中文":"EN"}}catch(e){}
-function filterSlots(){var q=document.getElementById("search-input").value.trim().toLowerCase();var rows=document.querySelectorAll("#slot-container .slot-row");var count=0;var nr=document.getElementById("search-no-result");if(nr)nr.remove();for(var i=0;i<rows.length;i++){var ip=rows[i].querySelector(".slot-input");var n=ip?ip.value.toLowerCase():"";if(!q||n.indexOf(q)!==-1){rows[i].classList.remove("hidden");count++}else{rows[i].classList.add("hidden")}}if(count===0){nr=document.createElement("div");nr.id="search-no-result";nr.style.cssText="padding:40px;text-align:center;color:var(--text-dim);font-size:14px";nr.textContent="无匹配结果";document.getElementById("slot-container").appendChild(nr)}}function flashSaveIndicator(){var e=document.getElementById("save-indicator");if(e){e.classList.add("visible");clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove("visible")},2000)}}
-function openDashboard(){var c=["inspire","explorer","explorer2","challenge"],t=0,h="";for(var i=0;i<c.length;i++){var a=data[c[i]]||[],f=0;for(var j=0;j<a.length;j++){if(a[j].name&&a[j].name.trim())f++}var p=Math.round((f/48)*100),co=CATS[c[i]].color;h+="<div class=dash-card><div>"+CATS[c[i]].icon+" "+CATS[c[i]].label+"</div>";h+='<div class=dash-stat><span>总计</span><span style="font-size:18px;font-weight:700;color:'+co+'">48</span></div>';h+='<div class=dash-stat><span>已填</span><span style="font-size:18px;font-weight:700;color:'+co+'">'+f+'</span></div>';h+='<div class=dash-stat><span>空白</span><span style="font-size:18px;font-weight:700">'+(48-f)+'</span></div>';h+='<div class=dash-chart-bar><div class=dash-chart-fill style=width:'+p+"%;background:"+co+"></div></div></div>";t+=f}h+='<div class=dash-summary><div><div style="font-size:32px;font-weight:800;color:var(--blue)">'+t+'</div><div>总计</div></div>';h+='<div><div style="font-size:32px;font-weight:800;color:var(--cyan)">'+Math.round((t/144)*100)+'%</div><div>完成率</div></div>';h+='<div><div style="font-size:32px;font-weight:800;color:var(--red)">'+(144-t)+'</div><div>空白</div></div></div>';document.getElementById("dash-content").innerHTML=h;document.querySelectorAll(".view").forEach(function(v){v.classList.remove("active")});document.getElementById("view-dashboard").classList.add("active")}
+function filterSlots(){var q=document.getElementById("search-input").value.trim().toLowerCase();var rows=document.querySelectorAll("#slot-container .slot-row");var count=0;var nr=document.getElementById("search-no-result");if(nr)nr.remove();for(var i=0;i<rows.length;i++){var ip=rows[i].querySelector(".slot-input");var n=ip?ip.value.toLowerCase():"";if(!q||n.indexOf(q)!==-1){rows[i].classList.remove("hidden");count++}else{rows[i].classList.add("hidden")}}if(count===0){nr=document.createElement("div");nr.id="search-no-result";nr.style.cssText="padding:40px;text-align:center;color:var(--text-dim);font-size:14px";nr.textContent=tr('searchNoResults');document.getElementById("slot-container").appendChild(nr)}}function flashSaveIndicator(){var e=document.getElementById("save-indicator");if(e){e.classList.add("visible");clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove("visible")},2000)}}
+function renderDashboardContent(){
+var cats=["inspire","explorer","explorer2","challenge"],filledAll=0,totalAll=0,h="";
+for(var i=0;i<cats.length;i++){
+var cat=cats[i],arr=data[cat]||[],filled=0,total=arr.length;
+for(var j=0;j<arr.length;j++){if(arr[j]&&arr[j].name&&arr[j].name.trim())filled++}
+filledAll+=filled;totalAll+=total;
+var pct=total?Math.round((filled/total)*100):0,c=CATS[cat];
+h+='<div class="dash-card"><div>'+escapeHtml((c.icon||"")+" "+catLabel(cat))+'</div>';
+h+='<div class="dash-stat"><span>'+tr("total")+'</span><span style="font-size:18px;font-weight:700;color:'+c.color+'">'+total+'</span></div>';
+h+='<div class="dash-stat"><span>'+tr("filled")+'</span><span style="font-size:18px;font-weight:700;color:'+c.color+'">'+filled+'</span></div>';
+h+='<div class="dash-stat"><span>'+tr("blank")+'</span><span style="font-size:18px;font-weight:700">'+(total-filled)+'</span></div>';
+h+='<div class="dash-chart-bar"><div class="dash-chart-fill" style="width:'+pct+'%;background:'+c.color+'"></div></div></div>'
+}
+var completion=totalAll?Math.round((filledAll/totalAll)*100):0,blankAll=totalAll-filledAll;
+h+='<div class="dash-summary"><div><div style="font-size:32px;font-weight:800;color:var(--blue)">'+totalAll+'</div><div>'+tr("total")+'</div></div>';
+h+='<div><div style="font-size:32px;font-weight:800;color:var(--cyan)">'+completion+'%</div><div>'+tr("completion")+'</div></div>';
+h+='<div><div style="font-size:32px;font-weight:800;color:var(--red)">'+blankAll+'</div><div>'+tr("blank")+'</div></div></div>';
+var el=document.getElementById("dash-content");if(el)el.innerHTML=h
+}
+function openDashboard(){renderDashboardContent();document.querySelectorAll(".view").forEach(function(v){v.classList.remove("active")});document.getElementById("view-dashboard").classList.add("active")}
 function closeDashboard(){document.querySelectorAll(".view").forEach(function(v){v.classList.remove("active")});document.getElementById("view-main").classList.add("active");updateCounts()}
-function printView(){var c=["inspire","explorer","explorer2","challenge"],h="<h1>MakeX Curriculum</h1><p>"+new Date().toLocaleDateString("zh-CN")+"</p>";for(var i=0;i<c.length;i++){var a=data[c[i]],l=CATS[c[i]].label,f=0;for(var j=0;j<a.length;j++){if(a[j].name&&a[j].name.trim())f++}h+="<h2>"+l+" ("+f+"/"+a.length+")</h2><table style=width:100%;border-collapse:collapse><tr><th style=border:1px solid #ccc;padding:6px>#</th><th style=border:1px solid #ccc;padding:6px>名称</th><th style=border:1px solid #ccc;padding:6px>器材</th></tr>";for(var j=0;j<a.length;j++){var s=a[j];if(s.name&&s.name.trim()){h+="<tr><td style=border:1px solid #ccc;padding:4px>"+(j+1)+"</td><td style=border:1px solid #ccc;padding:4px>"+s.name+"</td><td style=border:1px solid #ccc;padding:4px>"+(s.equipment||"")+"</td></tr>"}}h+="</table>"}var w=window.open("");w.document.write("<html><head><title>MakeX</title><style>body{font-family:sans-serif;padding:20px}</style></head><body>"+h+'<scr'+'ipt>window.print();window.close()<\/script></body></html>');w.document.close()}
-applyTheme(getTheme());var l=localStorage.getItem("makex_lang");if(l)document.getElementById("btn-lang").value=l;updateCounts();setTimeout(function(){var h=document.getElementById("shortcut-hint");if(h){h.classList.add("visible");setTimeout(function(){h.classList.remove("visible")},5000)}},1000);document.addEventListener("keydown",function(e){if(e.ctrlKey&&e.key==="s"){e.preventDefault();var d=document.getElementById("view-document");if(d&&d.classList.contains("active")){saveDocumentData();showToast("已保存");flashSaveIndicator()}}if(e.ctrlKey&&e.key==="p"){e.preventDefault();printView()}if(e.ctrlKey&&e.key==="f"){e.preventDefault();var s=document.getElementById("search-input");if(s){s.focus();s.select()}}});
+function printView(){
+var cats=["inspire","explorer","explorer2","challenge"],h="<h1>"+tr("printTitle")+"</h1><p>"+new Date().toLocaleDateString(uiLocale())+"</p>";
+for(var i=0;i<cats.length;i++){
+var arr=data[cats[i]]||[],filled=0;
+for(var j=0;j<arr.length;j++){if(arr[j]&&arr[j].name&&arr[j].name.trim())filled++}
+h+="<h2>"+escapeHtml(catLabel(cats[i]))+" ("+filled+"/"+arr.length+")</h2><table style=width:100%;border-collapse:collapse><tr><th style=border:1px solid #ccc;padding:6px>#</th><th style=border:1px solid #ccc;padding:6px>"+tr("nameHeader")+"</th><th style=border:1px solid #ccc;padding:6px>"+tr("equipmentHeader")+"</th></tr>";
+for(var j=0;j<arr.length;j++){var s=arr[j];if(s&&s.name&&s.name.trim()){h+="<tr><td style=border:1px solid #ccc;padding:4px>"+(j+1)+"</td><td style=border:1px solid #ccc;padding:4px>"+escapeHtml(s.name)+"</td><td style=border:1px solid #ccc;padding:4px>"+escapeHtml(s.equipment||"")+"</td></tr>"}}
+h+="</table>"
+}
+var w=window.open("");w.document.write("<html><head><title>"+escapeHtml(tr("printTitle"))+"</title><style>body{font-family:sans-serif;padding:20px}</style></head><body>"+h+'<scr'+'ipt>window.print();window.close()<\/script></body></html>');w.document.close()
+}
+applyTheme(getTheme());document.addEventListener("DOMContentLoaded",function(){applyLang(currentLang)});updateCounts();setTimeout(function(){var h=document.getElementById("shortcut-hint");if(h){h.classList.add("visible");setTimeout(function(){h.classList.remove("visible")},5000)}},1000);document.addEventListener("keydown",function(e){if(e.ctrlKey&&e.key==="s"){e.preventDefault();var d=document.getElementById("view-document");if(d&&d.classList.contains("active")){saveDocumentData();showToast(tr('saved'));flashSaveIndicator()}}if(e.ctrlKey&&e.key==="p"){e.preventDefault();printView()}if(e.ctrlKey&&e.key==="f"){e.preventDefault();var s=document.getElementById("search-input");if(s){s.focus();s.select()}}});
+
+var PPT_SERVER='http://localhost:3456';
+function handlePptDrop(files){handlePptFiles(files)}
+function handlePptFiles(files){if(!files||!files.length)return;for(var i=0;i<files.length;i++){uploadPpt(files[i])}}
+function uploadPpt(file){if(!docContext)return;var name=file.name;var xhr=new XMLHttpRequest();xhr.open('POST',PPT_SERVER+'/upload?cat='+encodeURIComponent(docContext.cat)+'&name='+encodeURIComponent(name),true);xhr.setRequestHeader('Content-Type','application/octet-stream');xhr.onload=function(){if(xhr.status===200){try{var r=JSON.parse(xhr.responseText);if(r.ok){var slot=data[docContext.cat][docContext.index];if(!slot.ppts)slot.ppts=[];slot.ppts.push({name:r.name,path:r.path});saveData();renderPpts();showToast(tr('uploadSaved'))}else{showToast(r.error||tr('saveFailed'),'error')}}catch(e){showToast(tr('responseError'),'error')}}else{showToast(tr('saveServerFailed'),'error')}};xhr.onerror=function(){showToast(tr('serverOffline'),'error')};xhr.send(file)}
+function renderPpts(){
+var list=document.getElementById('ppt-list');if(!list)return;
+if(!docContext){list.innerHTML='';return}
+var slot=data[docContext.cat][docContext.index];var arr=slot.ppts||[];if(!arr.length){list.innerHTML='';return}
+var h='';
+for(var i=0;i<arr.length;i++){
+var it=arr[i];var pp=it.path||'';var parts=pp.split(/[\\/]/);var rel=parts.slice(-2).join('/');var url=PPT_SERVER+'/ppt/'+encodeURIComponent(rel);
+h+='<div class="ppt-item"><span class="ico">📊</span><div class="info"><div class="nm">'+escapeHtml(it.name)+'</div><div class="loc">'+escapeHtml(tr('storageLocation'))+escapeHtml(it.path||'')+'</div></div><button onclick="window.open(\''+url+'\',\'_blank\')">'+tr('open')+'</button><button class="del" onclick="removePpt('+i+')">'+tr('delete')+'</button></div>'
+}
+list.innerHTML=h
+}
+function removePpt(i){if(!docContext)return;var slot=data[docContext.cat][docContext.index];if(!slot.ppts)return;slot.ppts.splice(i,1);saveData();renderPpts();showToast(tr('attachmentRemoved'))}
 </script>
 
 <div id="view-dashboard" class="view">
-<div class="cat-header"><button class="btn-back" onclick="closeDashboard()">← 返回</button><div class="cat-title" style="margin-left:auto">📊 统计数据</div></div>
+<div class="cat-header"><button class="btn-back" onclick="closeDashboard()">← <span data-i18n="back">返回</span></button><div class="cat-title" style="margin-left:auto" data-i18n="statsTitle">📊 统计数据</div></div>
 <div class="dash-grid fade-in" id="dash-content"></div></div>
-<div class="save-indicator" id="save-indicator"><span class="dot"></span>自动保存</div>
-<div class="shortcut-hint" id="shortcut-hint">Ctrl+S 保存 · Ctrl+P 打印 · Ctrl+F 搜索</div>
+<div class="save-indicator" id="save-indicator"><span class="dot"></span><span data-i18n="autoSave">自动保存</span></div>
+<div class="shortcut-hint" id="shortcut-hint" data-i18n="shortcutHint">Ctrl+S 保存 · Ctrl+P 打印 · Ctrl+F 搜索</div>
 <div class="toast-container" id="toast-container"></div>
 </body>
 </html>
