@@ -202,7 +202,23 @@
 .slot-insert{display:inline-flex;align-items:center;justify-content:center;width:28px;height:20px;border:none;border-radius:4px;background:rgba(41,121,255,0.05);color:rgba(41,121,255,0.4);cursor:pointer;font-size:13px;transition:all 0.2s;padding:0}
 .slot-insert:hover{background:rgba(41,121,255,0.15);color:var(--blue)}
 .slot-insert-theme{background:rgba(0,229,255,0.05);color:rgba(0,229,255,0.45);font-size:11px}
-.slot-insert-theme:hover{background:rgba(0,229,255,0.15);color:var(--cyan)}</style>
+.slot-insert-theme:hover{background:rgba(0,229,255,0.15);color:var(--cyan)}
+  .school-knowledge-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .school-knowledge-toggle{border:0;background:transparent;color:var(--text);font:inherit;font-weight:600;cursor:pointer;padding:8px 0;text-align:left}
+  .school-knowledge-status{color:var(--text-dim);font-size:12px;margin-right:auto}
+  .school-knowledge-status.is-stale,.school-knowledge-warning{color:#e9aa45}
+  .school-knowledge-content{padding-top:16px;line-height:1.75;font-size:13px}
+  #school-knowledge [hidden]{display:none!important}
+  .school-knowledge-note,.school-knowledge-empty{color:var(--text-dim);margin-bottom:12px}
+  .school-knowledge-card{padding:16px;margin:12px 0;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);overflow-wrap:anywhere}
+  .school-knowledge-card h4{font-size:15px}.school-knowledge-badge{color:var(--cyan);font-size:12px;margin:5px 0}
+  .school-knowledge-card blockquote{border-left:3px solid var(--blue);padding:6px 10px;margin:10px 0;color:var(--text-dim)}
+  .school-knowledge-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
+  .school-knowledge-columns h5{font-size:13px;margin-bottom:4px;color:var(--cyan)}
+  .school-knowledge-sources{color:var(--text-dim);margin-top:16px}.school-knowledge-sources summary{cursor:pointer}.school-knowledge-sources a{color:var(--blue)}
+  @media(max-width:640px){.school-knowledge-columns{grid-template-columns:1fr}.school-knowledge-header .btn-secondary{padding:8px 10px;font-size:12px}}
+  @media print{.school-knowledge-header button{display:none}.school-knowledge-sources{display:none}}
+</style>
 </head>
 <body>
 <div class="bg-grid"></div>
@@ -346,6 +362,17 @@
       </div>
 
 
+    <!-- Optional school curriculum associations -->
+    <section class="doc-section" id="school-knowledge" aria-label="学校知识点">
+      <div class="school-knowledge-header">
+        <button type="button" id="school-knowledge-toggle" class="school-knowledge-toggle" aria-expanded="false" aria-controls="school-knowledge-content">学校知识点 ▸ 展开</button>
+        <span id="school-knowledge-status" class="school-knowledge-status" role="status" aria-live="polite">尚未提取</span>
+        <button type="button" id="school-knowledge-generate" class="btn-secondary">提取知识点</button>
+        <button type="button" id="school-knowledge-confirm" class="btn-secondary" hidden>确认并保存</button>
+      </div>
+      <div id="school-knowledge-content" class="school-knowledge-content" hidden></div>
+    </section>
+
     <!-- PPT 附件 -->
     <div class="doc-section">
       <div class="doc-section-title"><span class="icon">📎</span> <span data-i18n="ppts">PPT 附件</span></div>
@@ -406,11 +433,13 @@ var syncTimer = null;
 var lastSyncData = null;
 var syncConnected = false;
 function pollData(){
+if(docContext)return;
 var dataUrl=location.protocol==='file:'?'http://localhost:3456/data.json':'/data.json';
 fetch(dataUrl).then(function(r){
 if(!r.ok)throw Error();
 return r.json();
 }).then(function(d){
+if(docContext)return;
 syncConnected = true;
 var el = document.getElementById('ws-status');
 updateConnectionStatus();
@@ -492,7 +521,7 @@ function loadData(){try{var r=localStorage.getItem("makex_data")||localStorage.g
 if(p&&Array.isArray(p.explorer)){var _hasEx=false;for(var _i=0;_i<p.explorer.length;_i++){if(p.explorer[_i]&&p.explorer[_i].name&&p.explorer[_i].name.trim()){_hasEx=true;break}}if(!_hasEx){var _seed=["Onshape 的学习及激光雕刻机的使用1","Onshape 的学习及激光雕刻机的使用2","Onshape 的学习及激光雕刻机的使用3","基于Onshape与激光雕刻机的螺丝量规制作","基于Onshape与激光雕刻机的齿轮的制作","认识电子元件与电路基础","搭建简单电路与LED控制（手电筒）"];for(var _j=0;_j<_seed.length;_j++){p.explorer.push(emptySlotNamed(_seed[_j]))}}}for(var _ki=0;_ki<keys.length;_ki++){var _k2=keys[_ki];if(Array.isArray(p[_k2])){for(var _si=0;_si<p[_k2].length;_si++){if(p[_k2][_si]&&typeof p[_k2][_si]==='object'&&!p[_k2][_si].theme){p[_k2][_si].theme='主题'+(Math.floor(_si/4)+1)}}}}
 return p}}catch(e){}return defaultData()}
 
-function pushToServer(silent){try{fetch("http://localhost:3456/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)}).then(function(r){if(!silent){if(r.ok){showToast(tr("synced"))}else{showToast(tr("syncFailed"),"error")}}}).catch(function(){if(!silent)showToast(tr("serverStartHint"),"error")})}catch(e){}}
+function pushToServer(silent){try{fetch(location.protocol==='file:'?"http://localhost:3456/update":"/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)}).then(function(r){if(!silent){if(r.ok){showToast(tr("synced"))}else{showToast(tr("syncFailed"),"error")}}}).catch(function(){if(!silent)showToast(tr("serverStartHint"),"error")})}catch(e){}}
 function saveData(){localStorage.setItem("makex_data",JSON.stringify(data));localStorage.setItem("makex_courses",JSON.stringify(data));updateCounts();pushToServer(true)}
 
 function addSlot(cat){
@@ -853,6 +882,7 @@ if(fields.equipment){document.getElementById('doc-equipment').value=fields.equip
 if(fields.objectives){document.getElementById('doc-objectives').textContent=fields.objectives;count++}
 if(fields.procedure){document.getElementById('doc-procedure').textContent=fields.procedure;count++}
 document.getElementById('paste-overlay').classList.remove('open')
+if(window.refreshSchoolKnowledge)refreshSchoolKnowledge(false);
 alert(trf('recognized',{count:count}))}function saveSlotFile(cat,index,name){var safeName=name.replace(/[<>:"\\/|?*]/g,'_').trim()||'untitled';var catLabel=CATS[cat].label.toLowerCase();var slotNum=pad(index+1);var filename='makex_'+catLabel+'_'+slotNum+'_'+safeName+'.txt'
 var content='[MakeX] '+CATS[cat].label+' - Slot '+slotNum+'\n课程名称: '+name+'\n创建时间: '+new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})+'\n---\n'+name+'\n'
 var blob=new Blob([content],{type:'text/plain;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
@@ -867,11 +897,11 @@ document.getElementById('doc-equipment').value=slot.equipment||''
 document.getElementById('doc-objectives').innerHTML=slot.objectives||''
 document.getElementById('doc-procedure').innerHTML=slot.procedure||'';renderPpts()
 document.getElementById('view-category').classList.remove('active')
-document.getElementById('view-document').classList.add('active');applyLang(currentLang)}
+document.getElementById('view-document').classList.add('active');applyLang(currentLang);if(window.refreshSchoolKnowledge)refreshSchoolKnowledge(true)}
 
 function closeDocument(){saveDocumentData();document.getElementById('view-document').classList.remove('active');document.getElementById('view-category').classList.add('active');renderCategory(docContext.cat);docContext=null}
 
-function saveDocumentData(){if(!docContext)return;var slot=data[docContext.cat][docContext.index];slot.name=document.getElementById('doc-name').value;slot.subtitle=document.getElementById('doc-subtitle').value;slot.equipment=document.getElementById('doc-equipment').value;slot.objectives=document.getElementById('doc-objectives').innerHTML;slot.procedure=document.getElementById('doc-procedure').innerHTML;saveData()}
+function saveDocumentData(){if(!docContext)return;var slot=data[docContext.cat][docContext.index];slot.name=document.getElementById('doc-name').value;slot.subtitle=document.getElementById('doc-subtitle').value;slot.equipment=document.getElementById('doc-equipment').value;slot.objectives=document.getElementById('doc-objectives').innerHTML;slot.procedure=document.getElementById('doc-procedure').innerHTML;saveData();if(window.refreshSchoolKnowledge)refreshSchoolKnowledge(false)}
 
 function downloadDocument(){
 saveDocumentData();
@@ -886,6 +916,7 @@ content+=sep();content+=line('  MakeX '+infoLabel+' · Slot '+slotNum);content+=
 content+=line('\n['+tr('courseName')+'] '+(slot.name||''));content+=line('['+tr('courseSubtitle')+'] '+(slot.subtitle||''));content+=line('['+tr('courseEquipment')+'] '+(slot.equipment||''));
 content+=line('\n━━━ '+tr('objectives')+' ━━━\n');content+=line(editorText('doc-objectives')||tr('notFilled'));
 content+=line('\n━━━ '+tr('procedure')+' ━━━\n');content+=line(editorText('doc-procedure')||tr('notFilled'));
+if(window.SchoolKnowledge&&slot.schoolKnowledge)content+=line('\n━━━ 学校知识点 ━━━\n'+SchoolKnowledge.exportText(slot.schoolKnowledge,slot));
 content+=line('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');content+=line(tr('createdAt')+': '+new Date().toLocaleString(uiLocale(),{timeZone:'Asia/Shanghai'}));content+=line('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 var blob=new Blob([content],{type:'text/plain;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)
 }
@@ -981,5 +1012,6 @@ function removePpt(i){if(!docContext)return;var slot=data[docContext.cat][docCon
 <div class="save-indicator" id="save-indicator"><span class="dot"></span><span data-i18n="autoSave">自动保存</span></div>
 <div class="shortcut-hint" id="shortcut-hint" data-i18n="shortcutHint">Ctrl+S 保存 · Ctrl+P 打印 · Ctrl+F 搜索</div>
 <div class="toast-container" id="toast-container"></div>
+<script src="school-knowledge.js"></script>
 </body>
 </html>

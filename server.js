@@ -105,6 +105,16 @@ const sv = http.createServer(function (req, res) {
     return;
   }
 
+  // A single explicit static asset keeps direct-file and server usage aligned.
+  if (u.pathname === '/school-knowledge.js' && req.method === 'GET') {
+    try {
+      const script = fs.readFileSync(path.join(DIR, 'school-knowledge.js'), 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/javascript;charset=utf-8', 'Cache-Control': 'no-cache' });
+      res.end(script);
+    } catch (e) { res.writeHead(404); res.end('Not found'); }
+    return;
+  }
+
   // 首页
   try {
     const html = fs.readFileSync(HTML, 'utf8');
