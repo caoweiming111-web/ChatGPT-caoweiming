@@ -153,7 +153,25 @@ function exportText(result, course) {
   if (!result.entries.length) lines.push('暂无可靠匹配，请补充教学目标或具体活动。');
   return lines.join('\n');
 }
-const api = { VERSION, SOURCES, RULES, plain, analyze, snapshot, stale, exportText };
+// Image export contains lesson content only, never editor hints or review state.
+function imageLines(result, expanded) {
+  if (!expanded || !result || !Array.isArray(result.entries) || !result.entries.length) return [];
+  const lines = [];
+  result.entries.forEach((item, index) => {
+    if (index) lines.push([]);
+    lines.push([{ text: String(item.title || '').replace(/（拓展）/g, ''), size: 15, bold: true }]);
+    for (const text of [
+      '课程原文：' + (item.evidence || ''),
+      '应用说明：' + (item.application || ''),
+      '公立学校：' + (item.publicSchool || ''),
+      'IB 国际学校：' + (item.ib || '')
+    ]) {
+      String(text).split(/\r?\n/).forEach(line => lines.push([{ text: line, size: 14, bold: false }]));
+    }
+  });
+  return lines;
+}
+const api = { VERSION, SOURCES, RULES, plain, analyze, snapshot, stale, exportText, imageLines };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 root.SchoolKnowledge = api;
 if (typeof document === 'undefined') return;

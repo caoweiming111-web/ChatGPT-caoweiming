@@ -89,3 +89,21 @@ test('software stability and charging speed are not treated as robot mechanics',
   assert.ok(!result.entries.some(x => x.id === 'motion'));
   assert.ok(!kb.analyze({ procedure: 'Use the command to start a discussion.' }).entries.some(x => x.id === 'measurement'));
 });
+test('image export omits collapsed panels and empty or ungenerated results', () => {
+  const result = kb.analyze({ procedure: '超声波测距利用声速和回波时间计算距离。' });
+  assert.deepEqual(kb.imageLines(result, false), []);
+  assert.deepEqual(kb.imageLines(null, true), []);
+  assert.deepEqual(kb.imageLines({ entries: [] }, true), []);
+});
+test('expanded image export includes both curricula but not review or stale messages', () => {
+  const course = { name: '三极管开关电路' };
+  const result = kb.analyze(course);
+  result.sourceSnapshot = 'old snapshot';
+  result.confirmed = false;
+  const text = kb.imageLines(result, true).flat().map(run => run.text).join('\n');
+  assert.match(text, /三极管开关与放大/);
+  assert.match(text, /公立学校：/);
+  assert.match(text, /IB 国际学校：/);
+  assert.doesNotMatch(text, /待教师确认|课程已修改|候选关联|教师已确认|重新提取|（拓展）/);
+  assert.equal(result.confirmed, false);
+});

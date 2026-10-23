@@ -665,12 +665,19 @@ tctx.font='14px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
 var fw=cw-24-24
 var objLines=layoutRichLines(extractRichLines('doc-objectives'),fw,tctx)
 var proLines=layoutRichLines(extractRichLines('doc-procedure'),fw,tctx)
+var knowledgePanel=document.getElementById('school-knowledge-content');
+var knowledgeSource=window.SchoolKnowledge?SchoolKnowledge.imageLines(slot.schoolKnowledge,!!knowledgePanel&&!knowledgePanel.hidden):[];
+var knowledgeLines=layoutRichLines(knowledgeSource,fw,tctx);
+var knowledgeH=knowledgeLines.length?28+richLayoutHeight(knowledgeLines):0;
+tctx.font='14px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
 function fh(v,mw){return 14+Math.max(wrapH(v||tr('notFilled'),mw,tctx,lh),lh)}
 var hh=82
 var infoH=20+fh(name,fw)+fh(subtitle,fw)+fh(eq,fw)+8
 var objH=20+Math.max(richLayoutHeight(objLines),lh)+8
 var proH=20+Math.max(richLayoutHeight(proLines),lh)
-var minFooterY=Math.max(200,82+hh+infoH+objH+proH+80);var H=8000;
+var minFooterY=Math.max(200,82+hh+infoH+objH+proH+80);
+// Allocate for all measured content before drawing, including long knowledge sections.
+var H=Math.max(8000,Math.ceil(minFooterY+knowledgeH+500));
 
 var cv=document.createElement('canvas');cv.width=W;cv.height=H;var cx=cv.getContext('2d')
 
@@ -777,6 +784,13 @@ ypos+=8
 ypos=secLabel(tr('procedure'),x,ypos,catColor)
 ypos=drawRichLines(proLines,x,ypos,cw-24-24,'#e0e4ea',cx)
 
+// Only the expanded panel contributes content; editor messages are not rendered.
+if(knowledgeLines.length){
+ypos+=12;
+ypos=secLabel('学校知识点',x,ypos,catColor);
+ypos=drawRichLines(knowledgeLines,x,ypos,fw,'#e0e4ea',cx);
+}
+
 // Footer
 ypos=Math.max(ypos+24,Math.max(200,82+hh+infoH+objH+proH+80))
 cx.strokeStyle='rgba(41,121,255,0.06)';cx.lineWidth=1
@@ -784,17 +798,6 @@ cx.beginPath();cx.moveTo(x,ypos);cx.lineTo(x+cw-48,ypos);cx.stroke()
 cx.font='11px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';cx.fillStyle='#556688'
 var now=new Date();var ds=now.toLocaleDateString(uiLocale(),{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'})
 cx.fillText(ds+' · MakeX · '+infoLabel,x,ypos+20)
-
-// 根据实际绘制位置扩展 canvas（防止内容被截断）
-if(ypos+50>H){
-var newH=Math.ceil(ypos+80);
-var oldImg=cv.getContext('2d').getImageData(0,0,W,H);
-cv.height=newH;
-H=newH;
-var bg2=cx.createLinearGradient(0,0,0,H);bg2.addColorStop(0,'#060a16');bg2.addColorStop(0.5,'#0c1428');bg2.addColorStop(1,'#060a16');
-cx.fillStyle=bg2;cx.fillRect(0,0,W,H);
-cx.putImageData(oldImg,0,0);
-}
 
 var finalH=Math.min(Math.ceil(ypos+80),H);if(finalH<H){var cc=document.createElement('canvas');cc.width=W;cc.height=finalH;cc.getContext('2d').drawImage(cv,0,0);cv=cc}
 // Copy to clipboard
