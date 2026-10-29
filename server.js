@@ -47,6 +47,7 @@ const sv = http.createServer(function (req, res) {
     return;
   }
   if (u.pathname === '/update' && req.method === 'POST') {
+    req.setEncoding('utf8');
     let body = '';
     req.on('data', c => body += c);
     req.on('end', () => {
@@ -106,9 +107,9 @@ const sv = http.createServer(function (req, res) {
   }
 
   // A single explicit static asset keeps direct-file and server usage aligned.
-  if (u.pathname === '/school-knowledge.js' && req.method === 'GET') {
+  if (['/school-knowledge.js', '/course-images.js'].includes(u.pathname) && req.method === 'GET') {
     try {
-      const script = fs.readFileSync(path.join(DIR, 'school-knowledge.js'), 'utf8');
+      const script = fs.readFileSync(path.join(DIR, u.pathname.slice(1)), 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/javascript;charset=utf-8', 'Cache-Control': 'no-cache' });
       res.end(script);
     } catch (e) { res.writeHead(404); res.end('Not found'); }

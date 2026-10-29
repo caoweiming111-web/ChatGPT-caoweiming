@@ -218,6 +218,15 @@
   .school-knowledge-sources{color:var(--text-dim);margin-top:16px}.school-knowledge-sources summary{cursor:pointer}.school-knowledge-sources a{color:var(--blue)}
   @media(max-width:640px){.school-knowledge-columns{grid-template-columns:1fr}.school-knowledge-header .btn-secondary{padding:8px 10px;font-size:12px}}
   @media print{.school-knowledge-header button{display:none}.school-knowledge-sources{display:none}}
+
+  .course-image-zone{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;line-height:1.8;color:var(--text-dim)}
+  .course-image-zone:focus-within,.course-image-zone:focus,.course-image-zone.is-over{border-color:var(--cyan);outline:none;background:rgba(0,229,255,.04)}
+  .course-image-zone p{font-size:12px;margin-top:8px}.course-image-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px;margin-top:16px}
+  .course-image-card{border:1px solid var(--border);border-radius:10px;padding:12px;min-width:0;background:var(--card-bg)}
+  .course-image-card img{display:block;width:100%;height:220px;object-fit:contain;background:rgba(255,255,255,.04);border-radius:6px}
+  .course-image-card label{display:block;font-size:12px;margin-top:10px;color:var(--text-dim)}
+  .course-image-card textarea{display:block;width:100%;margin-top:6px;resize:vertical;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font:inherit}
+  .course-image-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.course-image-actions button{font-size:12px;padding:6px 10px}.course-image-actions button:disabled{opacity:.35;cursor:default}
 </style>
 </head>
 <body>
@@ -362,6 +371,18 @@
       </div>
 
 
+    <section class="doc-section" id="course-images" aria-label="课程图片">
+      <div class="doc-section-title">🖼️ 课程图片 <span id="course-image-count" style="font-size:12px;color:var(--text-dim)"></span></div>
+      <div id="course-image-zone" class="course-image-zone" tabindex="0" aria-label="课程图片插入区域，可在此粘贴或拖入图片">
+        <button type="button" id="course-image-select" class="btn-secondary">＋ 插入图片</button>
+        <input type="file" id="course-image-files" accept="image/png,image/jpeg,image/webp" multiple hidden>
+        <p>选择或拖入图片，也可点击此区域后按 Ctrl+V 粘贴截图。</p>
+        <p>支持 PNG、JPG、WebP，单张不超过 10 MB，每课最多 12 张；自动压缩保存，生成教案图片时一并导出。</p>
+        <p id="course-image-progress" role="status" aria-live="polite"></p>
+      </div>
+      <div id="course-image-list" class="course-image-list"></div>
+    </section>
+
     <!-- Optional school curriculum associations -->
     <section class="doc-section" id="school-knowledge" aria-label="学校知识点">
       <div class="school-knowledge-header">
@@ -433,13 +454,13 @@ var syncTimer = null;
 var lastSyncData = null;
 var syncConnected = false;
 function pollData(){
-if(docContext)return;
+if(docContext||(window.CourseImages&&CourseImages.isBusy&&CourseImages.isBusy()))return;
 var dataUrl=location.protocol==='file:'?'http://localhost:3456/data.json':'/data.json';
 fetch(dataUrl).then(function(r){
 if(!r.ok)throw Error();
 return r.json();
 }).then(function(d){
-if(docContext)return;
+if(docContext||(window.CourseImages&&CourseImages.isBusy&&CourseImages.isBusy()))return;
 syncConnected = true;
 var el = document.getElementById('ws-status');
 updateConnectionStatus();
@@ -522,7 +543,15 @@ if(p&&Array.isArray(p.explorer)){var _hasEx=false;for(var _i=0;_i<p.explorer.len
 return p}}catch(e){}return defaultData()}
 
 function pushToServer(silent){try{fetch(location.protocol==='file:'?"http://localhost:3456/update":"/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)}).then(function(r){if(!silent){if(r.ok){showToast(tr("synced"))}else{showToast(tr("syncFailed"),"error")}}}).catch(function(){if(!silent)showToast(tr("serverStartHint"),"error")})}catch(e){}}
-function saveData(){localStorage.setItem("makex_data",JSON.stringify(data));localStorage.setItem("makex_courses",JSON.stringify(data));updateCounts();pushToServer(true)}
+function saveData(){
+var serialized=JSON.stringify(data);
+try{localStorage.setItem('makex_data',serialized)}catch(error){
+if(localStorage.getItem('makex_data')===null)throw error;
+localStorage.removeItem('makex_courses');localStorage.setItem('makex_data',serialized);
+}
+try{localStorage.setItem('makex_courses',serialized)}catch(error){localStorage.removeItem('makex_courses')}
+updateCounts();pushToServer(true)
+}
 
 function addSlot(cat){
 var arr=data[cat];
@@ -645,7 +674,7 @@ y+=richLineHeight(line)
 }
 drawCtx.textBaseline="alphabetic";return y
 }
-function generateImage(){
+async function generateImage(){
 if(!docContext){alert(tr('openDocFirst'));return}
 saveDocumentData()
 var slot=data[docContext.cat][docContext.index];var info=CATS[docContext.cat];var infoLabel=catLabel(docContext.cat);var sn=pad(docContext.index+1)
@@ -669,6 +698,14 @@ var knowledgePanel=document.getElementById('school-knowledge-content');
 var knowledgeSource=window.SchoolKnowledge?SchoolKnowledge.imageLines(slot.schoolKnowledge,!!knowledgePanel&&!knowledgePanel.hidden):[];
 var knowledgeLines=layoutRichLines(knowledgeSource,fw,tctx);
 var knowledgeH=knowledgeLines.length?28+richLayoutHeight(knowledgeLines):0;
+var courseImageLayouts=[];
+try{if(window.CourseImages)courseImageLayouts=await CourseImages.prepareExport(slot.images,fw)}
+catch(error){showToast(error.message||'课程图片读取失败，请重新插入后导出','error');return}
+var courseImagesH=courseImageLayouts.length?28:0;
+courseImageLayouts.forEach(function(item){
+item.captionLines=item.caption?layoutRichLines(item.caption.split(/\r?\n/).map(function(line){return [{text:line,size:14,bold:false}]}),fw,tctx):[];
+courseImagesH+=item.height+richLayoutHeight(item.captionLines)+24;
+});
 tctx.font='14px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
 function fh(v,mw){return 14+Math.max(wrapH(v||tr('notFilled'),mw,tctx,lh),lh)}
 var hh=82
@@ -677,7 +714,7 @@ var objH=20+Math.max(richLayoutHeight(objLines),lh)+8
 var proH=20+Math.max(richLayoutHeight(proLines),lh)
 var minFooterY=Math.max(200,82+hh+infoH+objH+proH+80);
 // Allocate for all measured content before drawing, including long knowledge sections.
-var H=Math.max(8000,Math.ceil(minFooterY+knowledgeH+500));
+var H=Math.max(8000,Math.ceil(minFooterY+knowledgeH+courseImagesH+500));
 
 var cv=document.createElement('canvas');cv.width=W;cv.height=H;var cx=cv.getContext('2d')
 
@@ -784,6 +821,16 @@ ypos+=8
 ypos=secLabel(tr('procedure'),x,ypos,catColor)
 ypos=drawRichLines(proLines,x,ypos,cw-24-24,'#e0e4ea',cx)
 
+// Course images retain their order and captions in the generated lesson.
+if(courseImageLayouts.length){
+ypos+=12;ypos=secLabel('课程图片',x,ypos,catColor);
+courseImageLayouts.forEach(function(item){
+cx.drawImage(item.image,x+(fw-item.width)/2,ypos,item.width,item.height);
+ypos+=item.height+8;
+if(item.captionLines.length)ypos=drawRichLines(item.captionLines,x,ypos,fw,'#e0e4ea',cx);
+ypos+=16;
+});
+}
 // Only the expanded panel contributes content; editor messages are not rendered.
 if(knowledgeLines.length){
 ypos+=12;
@@ -900,7 +947,7 @@ document.getElementById('doc-equipment').value=slot.equipment||''
 document.getElementById('doc-objectives').innerHTML=slot.objectives||''
 document.getElementById('doc-procedure').innerHTML=slot.procedure||'';renderPpts()
 document.getElementById('view-category').classList.remove('active')
-document.getElementById('view-document').classList.add('active');applyLang(currentLang);if(window.refreshSchoolKnowledge)refreshSchoolKnowledge(true)}
+document.getElementById('view-document').classList.add('active');applyLang(currentLang);if(window.refreshSchoolKnowledge)refreshSchoolKnowledge(true);if(window.renderCourseImages)renderCourseImages()}
 
 function closeDocument(){saveDocumentData();document.getElementById('view-document').classList.remove('active');document.getElementById('view-category').classList.add('active');renderCategory(docContext.cat);docContext=null}
 
@@ -1016,5 +1063,6 @@ function removePpt(i){if(!docContext)return;var slot=data[docContext.cat][docCon
 <div class="shortcut-hint" id="shortcut-hint" data-i18n="shortcutHint">Ctrl+S 保存 · Ctrl+P 打印 · Ctrl+F 搜索</div>
 <div class="toast-container" id="toast-container"></div>
 <script src="school-knowledge.js"></script>
+<script src="course-images.js"></script>
 </body>
 </html>
