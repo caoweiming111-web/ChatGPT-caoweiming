@@ -10,6 +10,7 @@ const { once } = require('node:events');
 test('large image saves preserve Chinese captions across UTF-8 chunk boundaries', async t => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'makex-utf8-'));
   await fs.copyFile(path.join(__dirname, '../server.js'), path.join(dir, 'server.js'));
+  await fs.copyFile(path.join(__dirname, '../sync-courses.js'), path.join(dir, 'sync-courses.js'));
   const reservation = net.createServer();
   reservation.listen(0, '127.0.0.1'); await once(reservation, 'listening');
   const port = reservation.address().port;

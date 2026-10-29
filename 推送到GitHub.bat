@@ -1,26 +1,21 @@
 @echo off
 chcp 65001 >nul
-cd /d "C:\Users\51155\Documents\Codex\2026-06-13\https-caoweiming111-web-github-io-makex"
-echo ========================================
-echo   MakeX 课程数据推送到 GitHub
-echo ========================================
-echo.
-echo [1/3] 添加文件...
-git add -A
-echo [2/3] 提交改动...
-git commit -m "同步课程数据"
-echo [3/3] 推送到 GitHub...
-git push origin master
-echo.
-if %errorlevel% equ 0 (
-    echo ========================================
-    echo   推送成功！
-    echo   https://github.com/caoweiming111-web/makex
-    echo ========================================
-) else (
-    echo ========================================
-    echo   推送失败，请把上面的错误信息发给 Codex
-    echo ========================================
+cd /d "%~dp0"
+set "MAKEX_NODE=node"
+where node >nul 2>nul
+if errorlevel 1 (
+    if exist "D:\node.exe" (
+        set "MAKEX_NODE=D:\node.exe"
+    ) else (
+        echo 未找到 Node.js，请先安装 Node.js 后重试。
+        pause
+        exit /b 1
+    )
 )
+echo MakeX 课程同步：ChatGPT-caoweiming / main
+echo 请先在浏览器保存课程。此脚本上传磁盘上的 makex_data.json。
+"%MAKEX_NODE%" "%~dp0sync-courses.js"
+set "MAKEX_RESULT=%errorlevel%"
 echo.
 pause
+exit /b %MAKEX_RESULT%

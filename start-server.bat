@@ -1,16 +1,17 @@
 @echo off
-title MakeX Collaboration Server
-cd /d "C:\Users\51155\Documents\Codex\2026-06-11\new-chat-2\outputs"
-echo ========================================
-echo   MakeX Server
-echo   http://localhost:3456
-echo   Press Ctrl+C to stop
-echo ========================================
-echo.
-D:\node.exe server.js
+chcp 65001 >nul
+cd /d "%~dp0"
+set "MAKEX_NODE=node"
+where node >nul 2>nul
 if errorlevel 1 (
-    echo.
-    echo Server error. Check that node_modules/ws exists.
-    echo Run: npm install
-    pause
+    if exist "D:\node.exe" (
+        set "MAKEX_NODE=D:\node.exe"
+    ) else (
+        echo 未找到 Node.js，请先安装 Node.js 后重试。
+        pause
+        exit /b 1
+    )
 )
+echo MakeX 本地服务器：按 Ctrl+C 停止。
+"%MAKEX_NODE%" "%~dp0server.js"
+if errorlevel 1 pause

@@ -1,16 +1,21 @@
 @echo off
-title Push MakeX to GitHub
+chcp 65001 >nul
 cd /d "%~dp0"
-echo Pushing MakeX to GitHub...
-echo.
-git remote add origin https://github.com/caoweiming111/makex.git 2>nul
-git push -u origin master
-if %errorlevel% equ 0 (
-    echo.
-    echo Success! Open: https://github.com/caoweiming111/makex
-) else (
-    echo.
-    echo Failed. Create token at https://github.com/settings/tokens
-    echo Then run: git push https://TOKEN@github.com/caoweiming111/makex.git
+set "MAKEX_NODE=node"
+where node >nul 2>nul
+if errorlevel 1 (
+    if exist "D:\node.exe" (
+        set "MAKEX_NODE=D:\node.exe"
+    ) else (
+        echo 未找到 Node.js，请先安装 Node.js 后重试。
+        pause
+        exit /b 1
+    )
 )
+echo MakeX 课程同步：ChatGPT-caoweiming / main
+echo 请先在浏览器保存课程。此脚本上传磁盘上的 makex_data.json。
+"%MAKEX_NODE%" "%~dp0sync-courses.js"
+set "MAKEX_RESULT=%errorlevel%"
+echo.
 pause
+exit /b %MAKEX_RESULT%

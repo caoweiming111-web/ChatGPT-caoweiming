@@ -245,13 +245,18 @@
             
       <button id="btn-dash" onclick="openDashboard()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">📊 统计</button>
       <button id="btn-print" onclick="printView()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">🖨️ 打印</button>
-      <button id="btn-sync" onclick="pushToServer(false)" title="把课程数据同步到项目文件（用于提交到 Git）" style="background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.25);color:var(--cyan);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">☁ 同步到Git</button>
+      <button id="btn-sync" onclick="syncToGitHub()" title="保存课程并上传到 ChatGPT-caoweiming/main" style="background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.25);color:var(--cyan);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">☁ 同步 GitHub</button>
       <button id="btn-theme" onclick="toggleTheme()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">🌓</button>
       <button id="btn-lang" onclick="toggleLang()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;font-size:11px;font-family:var(--mono);cursor:pointer">中文</button>
 <span id="ws-status" style="position:absolute;right:40px;top:24px;font-size:11px;font-family:var(--mono);color:var(--text-dim);letter-spacing:1px">○ 离线</span>
 <div class="logo-sub">Creative · Explore · Conquer</div>
     </div>
   </header>
+  <div style="text-align:center;padding:4px 16px 12px;font-size:12px;line-height:1.7;overflow-wrap:anywhere">
+    <span id="git-sync-status" role="status" aria-live="polite"></span>
+    <button type="button" id="load-project-courses" class="btn-secondary" onclick="loadProjectCourses()" hidden>备份浏览器课程并读取项目文件</button>
+  </div>
+
 
   <!-- ===== VIEW: MAIN ===== -->
   <div id="view-main" class="view active">
@@ -450,17 +455,32 @@ t+=c.v+' ('+c.d+')\n';
 for(var j=0;j<c.m.length;j++)t+='  • '+c.m[j]+'\n';t+='\n'}
 alert(t);
 }
+var serverSaveQueue = Promise.resolve();
+var localSaveRevision = 0;
+var localSavePending = localStorage.getItem('makex_pending_save') === '1';
+var courseDataConflict = false;
+var localDataOnStartup = localStorage.getItem('makex_data') || localStorage.getItem('makex_courses');
+var initialDataChecked = false;
 var syncTimer = null;
 var lastSyncData = null;
 var syncConnected = false;
 function pollData(){
-if(docContext||(window.CourseImages&&CourseImages.isBusy&&CourseImages.isBusy()))return;
+if(window.gitSyncInProgress||courseDataConflict||docContext||(window.CourseImages&&CourseImages.isBusy&&CourseImages.isBusy()))return;
+if(localSavePending){pushToServer(true);return;}
+var pollRevision=localSaveRevision;
 var dataUrl=location.protocol==='file:'?'http://localhost:3456/data.json':'/data.json';
 fetch(dataUrl).then(function(r){
 if(!r.ok)throw Error();
 return r.json();
 }).then(function(d){
-if(docContext||(window.CourseImages&&CourseImages.isBusy&&CourseImages.isBusy()))return;
+if(window.gitSyncInProgress||courseDataConflict||docContext||(window.CourseImages&&CourseImages.isBusy&&CourseImages.isBusy()))return;
+if(localSavePending||pollRevision!==localSaveRevision)return;
+if(!initialDataChecked){
+initialDataChecked=true;
+if(localDataOnStartup&&JSON.stringify(data)!==JSON.stringify(d)){
+courseDataConflict=true;if(window.reportCourseDataConflict)reportCourseDataConflict();return;
+}
+}
 syncConnected = true;
 var el = document.getElementById('ws-status');
 updateConnectionStatus();
@@ -492,7 +512,7 @@ var docContext = null;
 var CATS = {inspire:{label:'Inspire',labelEn:'Inspire',icon:'🚀',accent:'accent-blue',color:'#2979ff'},explorer:{label:'Explorer 第一年',labelEn:'Explorer Year 1',icon:'🔭',accent:'accent-cyan',color:'#00e5ff'},explorer2:{label:'Explorer 第二年',labelEn:'Explorer Year 2',icon:'🧪',accent:'accent-cyan',color:'#00bcd4'},challenge:{label:'Challenge',labelEn:'Challenge',icon:'⚡',accent:'accent-red',color:'#ff1744'}};
 var I18N = {
 zh:{
-dashboard:"统计",print:"打印",sync:"☁ 同步到Git",syncTitle:"把课程数据同步到项目文件（用于提交到 Git）",
+dashboard:"统计",print:"打印",sync:"☁ 同步 GitHub",syncTitle:"保存课程并上传到 ChatGPT-caoweiming/main",
 back:"返回",backToCourses:"返回课程列表",chooseModule:"选择一个模块开始你的旅程",
 inspireDesc:"灵感 · 启蒙 · 创造的火花",explorer1:"Explorer 第一年",explorer1Desc:"探索 · 基础 · 入门实践",explorer2:"Explorer 第二年",explorer2Desc:"探索 · 进阶 · 深入实践",challengeDesc:"挑战 · 突破 · 极限的超越",
 savedSummary:"◆ 共 {count} 个课程已保存",courseList:"课程列表",searchPlaceholder:"搜索课程...",namePlaceholder:"输入课程名称...",
@@ -507,7 +527,7 @@ uploadSaved:"PPT 已保存",synced:"✅ 已同步到项目文件",syncFailed:"�
 printTitle:"MakeX 课程表",nameHeader:"名称",equipmentHeader:"器材",createdAt:"创建时间"
 },
 en:{
-dashboard:"Stats",print:"Print",sync:"☁ Sync to Git",syncTitle:"Save course data to the project file for Git",
+dashboard:"Stats",print:"Print",sync:"☁ Sync GitHub",syncTitle:"Save lessons and push to ChatGPT-caoweiming/main",
 back:"Back",backToCourses:"Back to Courses",chooseModule:"Choose a module to begin",
 inspireDesc:"Inspiration · Discovery · Creativity",explorer1:"Explorer Year 1",explorer1Desc:"Explore · Fundamentals · Practice",explorer2:"Explorer Year 2",explorer2Desc:"Explore · Advanced · Build",challengeDesc:"Challenge · Breakthrough · Beyond",
 savedSummary:"◆ {count} courses saved",courseList:"Course List",searchPlaceholder:"Search courses...",namePlaceholder:"Enter course name...",
@@ -542,7 +562,20 @@ function loadData(){try{var r=localStorage.getItem("makex_data")||localStorage.g
 if(p&&Array.isArray(p.explorer)){var _hasEx=false;for(var _i=0;_i<p.explorer.length;_i++){if(p.explorer[_i]&&p.explorer[_i].name&&p.explorer[_i].name.trim()){_hasEx=true;break}}if(!_hasEx){var _seed=["Onshape 的学习及激光雕刻机的使用1","Onshape 的学习及激光雕刻机的使用2","Onshape 的学习及激光雕刻机的使用3","基于Onshape与激光雕刻机的螺丝量规制作","基于Onshape与激光雕刻机的齿轮的制作","认识电子元件与电路基础","搭建简单电路与LED控制（手电筒）"];for(var _j=0;_j<_seed.length;_j++){p.explorer.push(emptySlotNamed(_seed[_j]))}}}for(var _ki=0;_ki<keys.length;_ki++){var _k2=keys[_ki];if(Array.isArray(p[_k2])){for(var _si=0;_si<p[_k2].length;_si++){if(p[_k2][_si]&&typeof p[_k2][_si]==='object'&&!p[_k2][_si].theme){p[_k2][_si].theme='主题'+(Math.floor(_si/4)+1)}}}}
 return p}}catch(e){}return defaultData()}
 
-function pushToServer(silent){try{fetch(location.protocol==='file:'?"http://localhost:3456/update":"/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)}).then(function(r){if(!silent){if(r.ok){showToast(tr("synced"))}else{showToast(tr("syncFailed"),"error")}}}).catch(function(){if(!silent)showToast(tr("serverStartHint"),"error")})}catch(e){}}
+function pushToServer(silent){
+if(window.gitSyncInProgress||courseDataConflict)return serverSaveQueue;
+var snapshot=JSON.stringify(data);var revision=localSaveRevision;
+var task=serverSaveQueue.catch(function(){}).then(async function(){
+var response=await fetch(location.protocol==='file:'?'http://localhost:3456/update':'/update',{method:'POST',headers:{'Content-Type':'application/json'},body:snapshot});
+if(!response.ok)throw Error('save failed');
+var result=await response.json();if(!result.ok)throw Error('save failed');
+if(revision===localSaveRevision){localSavePending=false;localStorage.removeItem('makex_pending_save')}
+return result;
+});
+serverSaveQueue=task;
+task.then(function(){if(!silent)showToast(tr('synced'))},function(){if(!silent)showToast(tr('serverStartHint'),'error')});
+return task;
+}
 function saveData(){
 var serialized=JSON.stringify(data);
 try{localStorage.setItem('makex_data',serialized)}catch(error){
@@ -550,6 +583,7 @@ if(localStorage.getItem('makex_data')===null)throw error;
 localStorage.removeItem('makex_courses');localStorage.setItem('makex_data',serialized);
 }
 try{localStorage.setItem('makex_courses',serialized)}catch(error){localStorage.removeItem('makex_courses')}
+localSaveRevision++;localSavePending=true;try{localStorage.setItem('makex_pending_save','1')}catch(error){}
 updateCounts();pushToServer(true)
 }
 
@@ -1064,5 +1098,6 @@ function removePpt(i){if(!docContext)return;var slot=data[docContext.cat][docCon
 <div class="toast-container" id="toast-container"></div>
 <script src="school-knowledge.js"></script>
 <script src="course-images.js"></script>
+<script src="git-sync-client.js"></script>
 </body>
 </html>
