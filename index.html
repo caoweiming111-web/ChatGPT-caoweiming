@@ -119,6 +119,10 @@
   .rich-toolbar button.active{border-color:rgba(41,121,255,0.55);background:rgba(41,121,255,0.18);color:var(--blue)}
   .rich-toolbar .rich-bold{font-family:Georgia,serif;font-size:15px;font-weight:700}
   .rich-toolbar .rich-size-value{min-width:40px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--text-dim)}
+  .rich-toolbar input{height:28px;border:1px solid var(--border);border-radius:5px;background:var(--bg2);color:var(--text)}
+  .rich-toolbar input[type="number"]{width:56px;padding:2px 4px}
+  .rich-toolbar input[type="color"]{width:34px;padding:2px;cursor:pointer}
+  .rich-format-hint{font-size:11px;color:var(--text-dim);margin-left:6px}
   .doc-editor:empty::before{content:attr(data-placeholder);color:rgba(255,255,255,0.20);pointer-events:none}
     .img-toolbar{display:none;position:fixed;z-index:999;padding:4px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;gap:2px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,0.5);pointer-events:auto;white-space:nowrap}
   .img-toolbar button{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:11px;font-family:var(--mono);transition:all 0.15s;letter-spacing:0.5px}
@@ -340,9 +344,11 @@
         <div id="doc-objectives" class="doc-editor" contenteditable="true" data-placeholder="描述本课程的学习目标..." data-i18n-placeholder="objectivesPlaceholder"></div>
         <div class="rich-toolbar" data-editor="doc-objectives" onmousedown="return richToolbarMousedown(event)">
           <button type="button" data-rich-action="size-down" title="减小字号" data-i18n-title="fontSizeDown">A-</button>
-          <span class="rich-size-value" data-rich-size-value="doc-objectives">14</span>
+          <input type="number" class="rich-size-value" data-rich-size-input="doc-objectives" min="8" max="72" step="2" value="14" aria-label="字号" data-i18n-aria="fontSize">
           <button type="button" data-rich-action="size-up" title="增大字号" data-i18n-title="fontSizeUp">A+</button>
           <button type="button" class="rich-bold" data-rich-action="bold" title="加粗" data-i18n-title="bold">B</button>
+          <input type="color" data-rich-color="doc-objectives" value="#e8eaed" title="文字颜色" aria-label="文字颜色" data-i18n-title="fontColor" data-i18n-aria="fontColor">
+          <span class="rich-format-hint" data-i18n="formatHint">选中文字调整；未选中时应用到整个文本框</span>
         </div>
       </div>
     </div>
@@ -355,9 +361,11 @@
         <div id="doc-procedure" class="doc-editor" contenteditable="true" data-placeholder="分步骤描述课程流程..." data-i18n-placeholder="procedurePlaceholder" style="min-height:200px"></div>
         <div class="rich-toolbar" data-editor="doc-procedure" onmousedown="return richToolbarMousedown(event)">
           <button type="button" data-rich-action="size-down" title="减小字号" data-i18n-title="fontSizeDown">A-</button>
-          <span class="rich-size-value" data-rich-size-value="doc-procedure">14</span>
+          <input type="number" class="rich-size-value" data-rich-size-input="doc-procedure" min="8" max="72" step="2" value="14" aria-label="字号" data-i18n-aria="fontSize">
           <button type="button" data-rich-action="size-up" title="增大字号" data-i18n-title="fontSizeUp">A+</button>
           <button type="button" class="rich-bold" data-rich-action="bold" title="加粗" data-i18n-title="bold">B</button>
+          <input type="color" data-rich-color="doc-procedure" value="#e8eaed" title="文字颜色" aria-label="文字颜色" data-i18n-title="fontColor" data-i18n-aria="fontColor">
+          <span class="rich-format-hint" data-i18n="formatHint">选中文字调整；未选中时应用到整个文本框</span>
         </div>
       </div>
     </div>
@@ -414,7 +422,8 @@
       <button class="btn-secondary" onclick="closeDocument()" data-i18n="cancel">取消</button>
       <button class="btn-secondary" onclick="openSmartPaste()" data-i18n="smartPasteBtn">📋 智能粘贴</button>
       <button class="btn-secondary" onclick="saveDocumentData();alert(tr('dataSaved'))" data-i18n="saveDataBtn">💾 保存数据</button>
-      <button class="btn-secondary" onclick="generateImage()" data-i18n="generateImageBtn">🖼️ 生成图片</button>
+      <button class="btn-secondary" onclick="generateImage()" data-i18n="generateImageBtn">🖼️ 生成训练预告</button>
+      <button class="btn-secondary" onclick="generateFullDocumentImage()" data-i18n="fullImageBtn">📄 导出完整教案</button>
       <button class="btn-primary" onclick="downloadDocument()" data-i18n="downloadDocBtn">📥 保存并下载文档</button>
     </div>
   </div>
@@ -464,8 +473,12 @@ var initialDataChecked = false;
 var syncTimer = null;
 var lastSyncData = null;
 var syncConnected = false;
+function isCategoryEditing(){
+var container=document.getElementById('slot-container');var active=document.activeElement;
+return !!(container&&active&&container.contains(active)&&(active.classList.contains('th-text')||active.classList.contains('slot-input')));
+}
 function pollData(){
-if(window.gitSyncInProgress||courseDataConflict||docContext||(window.CourseImages&&CourseImages.isBusy&&CourseImages.isBusy()))return;
+if(window.gitSyncInProgress||courseDataConflict||docContext||isCategoryEditing()||(window.CourseImages&&CourseImages.isBusy&&CourseImages.isBusy()))return;
 if(localSavePending){pushToServer(true);return;}
 var pollRevision=localSaveRevision;
 var dataUrl=location.protocol==='file:'?'http://localhost:3456/data.json':'/data.json';
@@ -473,7 +486,7 @@ fetch(dataUrl).then(function(r){
 if(!r.ok)throw Error();
 return r.json();
 }).then(function(d){
-if(window.gitSyncInProgress||courseDataConflict||docContext||(window.CourseImages&&CourseImages.isBusy&&CourseImages.isBusy()))return;
+if(window.gitSyncInProgress||courseDataConflict||docContext||isCategoryEditing()||(window.CourseImages&&CourseImages.isBusy&&CourseImages.isBusy()))return;
 if(localSavePending||pollRevision!==localSaveRevision)return;
 if(!initialDataChecked){
 initialDataChecked=true;
@@ -519,9 +532,9 @@ savedSummary:"◆ 共 {count} 个课程已保存",courseList:"课程列表",sear
 save:"保存",open:"打开",delete:"删除",addCourse:"添加课程",addTheme:"添加主题",addCourseHere:"在此处添加课程",addThemeHere:"在此处添加新主题",lessonUnit:"节课",deleteThemeTitle:"删除该主题",deleteThemeConfirm:"删除主题「{name}」？其中的课程会移入上一个主题。",deleteCourseConfirm:"确定要删除「{name}」吗？",
 empty:"空",savedShort:"已存",saved:"已保存",sorted:"已排序",themeSaved:"主题已保存",themeMoved:"主题已移动",themeDeleted:"主题已删除，课程已移入上一主题",unnamedTheme:"未命名主题",themePrefix:"主题",newThemePrompt:"输入新主题名称：",newCourse:"新课程",untitled:"(未命名)",notFilled:"(未填写)",
 courseInfo:"课程信息",courseName:"课程名称",courseSubtitle:"课程副标题",courseEquipment:"课程使用器材",nameInputPlaceholder:"输入课程名称",subtitlePlaceholder:"输入副标题",equipmentPlaceholder:"例如: MakeX 机器人套件",objectives:"课程目标",objectivesPlaceholder:"描述本课程的学习目标...",procedure:"课程基本流程",procedurePlaceholder:"分步骤描述课程流程...",ppts:"PPT 附件",dropHint:"将 PPT 拖到这里，或点击选择文件",dropSupport:"支持 .ppt / .pptx",
-cancel:"取消",smartPasteBtn:"📋 智能粘贴",saveDataBtn:"💾 保存数据",generateImageBtn:"🖼️ 生成图片",downloadDocBtn:"📥 保存并下载文档",dataSaved:"数据已保存",
+cancel:"取消",smartPasteBtn:"📋 智能粘贴",saveDataBtn:"💾 保存数据",generateImageBtn:"🖼️ 生成训练预告",fullImageBtn:"📄 导出完整教案",downloadDocBtn:"📥 保存并下载文档",dataSaved:"数据已保存",
 pasteTitle:"📋 智能粘贴",pasteContent:"粘贴课程内容",pasteAutoFill:"，系统将自动识别并填入对应区域。",supportedFormats:"支持格式：",courseKeyContent:"课程关键内容",courseEquipmentKey:"课程需要器材/设备/资料",parseFillBtn:"🔄 解析并填充",pastePlaceholder:"在此粘贴课程内容...\n\n可填写课程关键内容、课程目标、课程需要器材和课程基本流程。",pleasePaste:"请先粘贴内容",recognized:"已识别并填充 {count} 个字段",
-imageLeft:"左对齐",imageCenter:"居中",imageRight:"右对齐",fontSizeDown:"减小字号",fontSizeUp:"增大字号",bold:"加粗",imageCopied:"图片已复制到剪贴板",imageDownloaded:"图片已下载到本地（浏览器限制，无法直接复制到剪贴板）",
+imageLeft:"左对齐",imageCenter:"居中",imageRight:"右对齐",fontSize:"字号",fontColor:"文字颜色",formatHint:"选中文字调整；未选中时应用到整个文本框",fontSizeDown:"减小字号",fontSizeUp:"增大字号",bold:"加粗",imageCopied:"图片已复制到剪贴板",imageDownloaded:"图片已下载到本地（浏览器限制，无法直接复制到剪贴板）",
 statsTitle:"📊 统计数据",total:"总计",filled:"已填",blank:"空白",completion:"完成率",searchNoResults:"无匹配结果",online:"● 在线",offline:"○ 离线",autoSave:"自动保存",shortcutHint:"Ctrl+S 保存 · Ctrl+P 打印 · Ctrl+F 搜索",
 uploadSaved:"PPT 已保存",synced:"✅ 已同步到项目文件",syncFailed:"同步失败",serverStartHint:"本地服务器未启动，请用桌面图标打开",openDocFirst:"请先打开一个文档",saveFailed:"保存失败",saveServerFailed:"保存失败，请确认本地服务器已启动",serverOffline:"无法连接本地服务器，请确认已通过桌面图标启动",responseError:"响应错误",attachmentRemoved:"已移除附件",storageLocation:"储存位置：",
 printTitle:"MakeX 课程表",nameHeader:"名称",equipmentHeader:"器材",createdAt:"创建时间"
@@ -534,9 +547,9 @@ savedSummary:"◆ {count} courses saved",courseList:"Course List",searchPlacehol
 save:"Save",open:"Open",delete:"Delete",addCourse:"Add Course",addTheme:"Add Theme",addCourseHere:"Add course here",addThemeHere:"Add theme here",lessonUnit:"lessons",deleteThemeTitle:"Delete theme",deleteThemeConfirm:"Delete theme '{name}'? Its courses will move to the previous theme.",deleteCourseConfirm:"Delete '{name}'?",
 empty:"Empty",savedShort:"Saved",saved:"Saved",sorted:"Sorted",themeSaved:"Theme saved",themeMoved:"Theme moved",themeDeleted:"Theme deleted; its courses moved to the previous theme",unnamedTheme:"Untitled theme",themePrefix:"Theme",newThemePrompt:"Enter a new theme name:",newCourse:"New Course",untitled:"(Untitled)",notFilled:"(Not filled)",
 courseInfo:"Course Information",courseName:"Course Name",courseSubtitle:"Course Subtitle",courseEquipment:"Course Materials",nameInputPlaceholder:"Enter course name",subtitlePlaceholder:"Enter subtitle",equipmentPlaceholder:"e.g. MakeX Robotics Kit",objectives:"Course Objectives",objectivesPlaceholder:"Describe the learning objectives...",procedure:"Course Procedure",procedurePlaceholder:"Describe the lesson steps...",ppts:"PPT Attachments",dropHint:"Drop a PPT here, or click to choose a file",dropSupport:"Supports .ppt / .pptx",
-cancel:"Cancel",smartPasteBtn:"📋 Smart Paste",saveDataBtn:"💾 Save Data",generateImageBtn:"🖼️ Generate Image",downloadDocBtn:"📥 Save & Download",dataSaved:"Data saved",
+cancel:"Cancel",smartPasteBtn:"📋 Smart Paste",saveDataBtn:"💾 Save Data",generateImageBtn:"🖼️ Training Preview",fullImageBtn:"📄 Full Lesson Image",downloadDocBtn:"📥 Save & Download",dataSaved:"Data saved",
 pasteTitle:"📋 Smart Paste",pasteContent:"Paste course content",pasteAutoFill:", and the system will fill the matching fields automatically.",supportedFormats:"Supported sections: ",courseKeyContent:"Course Key Content",courseEquipmentKey:"Course Materials / Equipment / Resources",parseFillBtn:"🔄 Parse & Fill",pastePlaceholder:"Paste course content here...\n\nCourse Key Content, Objectives, Materials, and Procedure are supported.",pleasePaste:"Please paste some content first",recognized:"Recognized and filled {count} fields",
-imageLeft:"Align left",imageCenter:"Center",imageRight:"Align right",fontSizeDown:"Decrease font size",fontSizeUp:"Increase font size",bold:"Bold",imageCopied:"Image copied to clipboard",imageDownloaded:"Image downloaded because the browser blocked clipboard access",
+imageLeft:"Align left",imageCenter:"Center",imageRight:"Align right",fontSize:"Font size",fontColor:"Text color",formatHint:"Format selected text, or the entire field if nothing is selected",fontSizeDown:"Decrease font size",fontSizeUp:"Increase font size",bold:"Bold",imageCopied:"Image copied to clipboard",imageDownloaded:"Image downloaded because the browser blocked clipboard access",
 statsTitle:"📊 Statistics",total:"Total",filled:"Filled",blank:"Blank",completion:"Completion",searchNoResults:"No matching courses",online:"● Online",offline:"○ Offline",autoSave:"Auto-save",shortcutHint:"Ctrl+S Save · Ctrl+P Print · Ctrl+F Search",
 uploadSaved:"PPT saved",synced:"✅ Synced to project file",syncFailed:"Sync failed",serverStartHint:"The local server is not running. Open MakeX from the desktop shortcut.",openDocFirst:"Open a course first",saveFailed:"Save failed",saveServerFailed:"Save failed. Make sure the local server is running.",serverOffline:"Cannot reach the local server. Open MakeX from the desktop shortcut.",responseError:"Invalid server response",attachmentRemoved:"Attachment removed",storageLocation:"Location: ",
 printTitle:"MakeX Curriculum",nameHeader:"Name",equipmentHeader:"Equipment",createdAt:"Created"
@@ -609,8 +622,40 @@ updateSavedSummary();updateConnectionStatus()}
 function openCategory(cat){currentCategory=cat;document.getElementById('view-main').classList.remove('active');document.getElementById('view-category').classList.add('active');renderCategory(cat)}
 function goHome(){document.getElementById('view-category').classList.remove('active');document.getElementById('view-main').classList.add('active')}
 
+function bindThemeEditor(editor,cat,arr,themeName){
+var composing=false;
+editor.addEventListener('focus',function(){this.parentElement.draggable=false});
+editor.addEventListener('compositionstart',function(){composing=true});
+editor.addEventListener('compositionend',function(){composing=false});
+editor.addEventListener('paste',function(e){
+e.preventDefault();
+if(!e.clipboardData)return;
+var text=e.clipboardData.getData('text/plain').replace(/[\r\n\t\u2028\u2029]+/g,' ').replace(/\u00a0/g,' ');
+if(!text)return;
+if(document.execCommand&&document.execCommand('insertText',false,text))return;
+var selection=window.getSelection();
+if(!selection||!selection.rangeCount)return;
+var range=selection.getRangeAt(0);
+if(!this.contains(range.startContainer)||!this.contains(range.endContainer))return;
+range.deleteContents();var node=document.createTextNode(text);range.insertNode(node);
+range.setStartAfter(node);range.collapse(true);selection.removeAllRanges();selection.addRange(range);
+});
+editor.addEventListener('beforeinput',function(e){
+if(!composing&&!e.isComposing&&(e.inputType==='insertParagraph'||e.inputType==='insertLineBreak'))e.preventDefault();
+});
+editor.addEventListener('blur',function(){
+composing=false;this.parentElement.draggable=true;
+var name=this.textContent.trim()||tr('unnamedTheme');
+if(name===themeName){this.textContent=name;return;}
+for(var q=0;q<arr.length;q++){if(arr[q].theme===themeName)arr[q].theme=name}
+saveData();renderCategory(cat);showToast(tr('themeSaved'));
+});
+editor.addEventListener('keydown',function(e){
+if(e.key==='Enter'&&!composing&&!e.isComposing&&e.keyCode!==229){e.preventDefault();this.blur()}
+});
+}
 function renderCategory(cat){var info=CATS[cat];document.getElementById('cat-title').textContent=catLabel(cat);document.getElementById('cat-title').className='cat-title '+info.accent;var container=document.getElementById('slot-container');container.innerHTML='';var arr=data[cat];arr=normalizeThemes(cat)
-var lastTheme='';for(var i=0;i<arr.length;i++){let idx=i;var num=pad(i+1);var slot=arr[i]||emptySlot();var val=slot.name||'';let st=slot.theme||('主题'+(Math.floor(idx/4)+1));if(!slot.theme){slot.theme=st}if(st!==lastTheme){var th=document.createElement('div');th.className='theme-header';th.draggable=true;th.dataset.theme=st;th.addEventListener('dragstart',function(e){dragMode='theme';e.dataTransfer.setData('text/plain',this.dataset.theme);this.classList.add('dragging')});th.addEventListener('dragend',function(){dragMode='';this.classList.remove('dragging');document.querySelectorAll('.theme-header.drag-over').forEach(function(e){e.classList.remove('drag-over')})});th.addEventListener('dragover',function(e){e.preventDefault();document.querySelectorAll('.theme-header.drag-over').forEach(function(e2){if(e2!==this)e2.classList.remove('drag-over')});this.classList.add('drag-over')});th.addEventListener('drop',function(e){e.preventDefault();this.classList.remove('drag-over');if(dragMode==='theme'){var tn=e.dataTransfer.getData('text/plain');if(tn&&tn!==this.dataset.theme){var k=currentCategory||'inspire';var arr=data[k];var firstIdx=-1;for(var i=0;i<arr.length;i++){if(arr[i].theme===this.dataset.theme){firstIdx=i;break}}if(firstIdx>=0)moveTheme(k,tn,arr[firstIdx],true)}}else if(dragMode==='course'){}});var thHandle=document.createElement('span');thHandle.className='th-handle';thHandle.textContent='⠿';var thText=document.createElement('span');thText.className='th-text';thText.textContent=st;thText.contentEditable=true;thText.addEventListener('blur',function(){var t=this.textContent.trim()||tr('unnamedTheme');for(var q=0;q<arr.length;q++){if(arr[q].theme===st)arr[q].theme=t}saveData();renderCategory(cat);showToast(tr('themeSaved'))});thText.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();this.blur()}});thText.addEventListener('compositionend',function(){this.blur()});var cnt=0;for(var q=0;q<arr.length;q++){if(arr[q].theme===st)cnt++}var thCount=document.createElement('span');thCount.className='th-count';thCount.textContent=lessonText(cnt);var thAdd=document.createElement('button');thAdd.className='th-add';thAdd.textContent='+ '+tr('addCourse');thAdd.onclick=function(tn){return function(){addCourseToTheme(cat,tn)}}(st);var thDel=document.createElement("button");thDel.className="th-del";thDel.textContent="×";thDel.title=tr('deleteThemeTitle');thDel.onclick=function(tn){return function(){if(confirm(trf('deleteThemeConfirm',{name:tn}))){deleteTheme(cat,tn)}}}(st);th.appendChild(thHandle);th.appendChild(thText);th.appendChild(thCount);th.appendChild(thDel);th.appendChild(thAdd);container.appendChild(th);lastTheme=st}var row=document.createElement('div');row.className='slot-row';row.draggable=true;row.dataset.index=idx
+var lastTheme='';for(var i=0;i<arr.length;i++){let idx=i;var num=pad(i+1);var slot=arr[i]||emptySlot();var val=slot.name||'';let st=slot.theme||('主题'+(Math.floor(idx/4)+1));if(!slot.theme){slot.theme=st}if(st!==lastTheme){var th=document.createElement('div');th.className='theme-header';th.draggable=true;th.dataset.theme=st;th.addEventListener('dragstart',function(e){dragMode='theme';e.dataTransfer.setData('text/plain',this.dataset.theme);this.classList.add('dragging')});th.addEventListener('dragend',function(){dragMode='';this.classList.remove('dragging');document.querySelectorAll('.theme-header.drag-over').forEach(function(e){e.classList.remove('drag-over')})});th.addEventListener('dragover',function(e){e.preventDefault();document.querySelectorAll('.theme-header.drag-over').forEach(function(e2){if(e2!==this)e2.classList.remove('drag-over')});this.classList.add('drag-over')});th.addEventListener('drop',function(e){e.preventDefault();this.classList.remove('drag-over');if(dragMode==='theme'){var tn=e.dataTransfer.getData('text/plain');if(tn&&tn!==this.dataset.theme){var k=currentCategory||'inspire';var arr=data[k];var firstIdx=-1;for(var i=0;i<arr.length;i++){if(arr[i].theme===this.dataset.theme){firstIdx=i;break}}if(firstIdx>=0)moveTheme(k,tn,arr[firstIdx],true)}}else if(dragMode==='course'){}});var thHandle=document.createElement('span');thHandle.className='th-handle';thHandle.textContent='⠿';var thText=document.createElement('span');thText.className='th-text';thText.textContent=st;thText.contentEditable=true;bindThemeEditor(thText,cat,arr,st);var cnt=0;for(var q=0;q<arr.length;q++){if(arr[q].theme===st)cnt++}var thCount=document.createElement('span');thCount.className='th-count';thCount.textContent=lessonText(cnt);var thAdd=document.createElement('button');thAdd.className='th-add';thAdd.textContent='+ '+tr('addCourse');thAdd.onclick=function(tn){return function(){addCourseToTheme(cat,tn)}}(st);var thDel=document.createElement("button");thDel.className="th-del";thDel.textContent="×";thDel.title=tr('deleteThemeTitle');thDel.onclick=function(tn){return function(){if(confirm(trf('deleteThemeConfirm',{name:tn}))){deleteTheme(cat,tn)}}}(st);th.appendChild(thHandle);th.appendChild(thText);th.appendChild(thCount);th.appendChild(thDel);th.appendChild(thAdd);container.appendChild(th);lastTheme=st}var row=document.createElement('div');row.className='slot-row';row.draggable=true;row.dataset.index=idx
 var numEl=document.createElement('div');numEl.className='slot-num';numEl.textContent=num;row.appendChild(numEl)
 var wrap=document.createElement('div');wrap.className='slot-input-wrap';var input=document.createElement('input');input.type='text';input.className='slot-input'+(val?' saved':'');input.placeholder=tr('namePlaceholder');input.value=val;input.dataset.index=idx
 input.addEventListener('input',function(){var idx=parseInt(this.dataset.index);arr[idx].name=this.value;saveData();if(this.value.trim()){this.classList.add('saved')}else{this.classList.remove('saved')}
@@ -633,26 +678,119 @@ function normalizeEditorText(t){return String(t||"").replace(/\r\n?/g,"\n").repl
 function editorText(id){var el=document.getElementById(id);if(!el)return "";var h=el.innerHTML||"";if(!h)return "";var converted="";var decoded=h.replace(/<br\s*\/?>/gi,"\n").replace(/<\/(div|p|li|h[1-6]|tr)>/gi,"\n").replace(/<(div|p|li|h[1-6]|tr)[^>]*>/gi,"").replace(/<[^>]+>/g,"");var ta=document.createElement("textarea");ta.innerHTML=decoded;converted=normalizeEditorText(ta.value);var visible=normalizeEditorText(el.innerText||"");var convertedLines=(converted.match(/\n/g)||[]).length;var visibleLines=(visible.match(/\n/g)||[]).length;return visible&&(!converted||visibleLines>convertedLines)?visible:converted}
 var activeRichEditor=null;
 var savedRichRange=null;
-function richToolbarMousedown(e){if(e.target.closest("button"))e.preventDefault();return false}
-function getRichEditorForNode(node){if(!node)return null;var el=node.nodeType===1?node:node.parentElement;return el?el.closest(".doc-editor"):null}
-function syncRichSelection(){var sel=window.getSelection();if(!sel||!sel.rangeCount)return;var editor=getRichEditorForNode(sel.anchorNode);if(!editor)return;activeRichEditor=editor;savedRichRange=sel.getRangeAt(0).cloneRange();updateRichToolbarState(editor)}
-function restoreRichRange(editor){var sel=window.getSelection();if(savedRichRange&&editor.contains(savedRichRange.startContainer)&&editor.contains(savedRichRange.endContainer)){sel.removeAllRanges();sel.addRange(savedRichRange);return sel.getRangeAt(0).cloneRange()}return null}
-function getRichNode(editor,range){var n=range&&range.startContainer?range.startContainer:editor;var el=n.nodeType===1?n:n.parentElement;return el&&editor.contains(el)?el:editor}
-function getRichStyle(editor,range){var el=getRichNode(editor,range);var cs=window.getComputedStyle(el);return{size:Math.max(8,Math.min(72,Math.round(parseFloat(cs.fontSize)||14))),bold:parseInt(cs.fontWeight,10)>=600||cs.fontWeight==="bold"}}
-function updateRichToolbarState(editor){editor=editor||activeRichEditor;if(!editor)return;var sel=window.getSelection();var range=sel&&sel.rangeCount?sel.getRangeAt(0):null;if(range&&!editor.contains(range.startContainer))range=null;var style=getRichStyle(editor,range);var value=document.querySelector('[data-rich-size-value="'+editor.id+'"]');if(value)value.textContent=style.size;var toolbar=document.querySelector('.rich-toolbar[data-editor="'+editor.id+'"]');if(toolbar){var boldBtn=toolbar.querySelector('[data-rich-action="bold"]');if(boldBtn)boldBtn.classList.toggle("active",style.bold)}}
-function ensureRichRoot(editor){var root=null;for(var i=0;i<editor.children.length;i++){if(editor.children[i].getAttribute("data-rich-root")==="1"){root=editor.children[i];break}}if(!root){root=document.createElement("div");root.setAttribute("data-rich-root","1");while(editor.firstChild)root.appendChild(editor.firstChild);editor.appendChild(root)}return root}
-function selectRichRoot(editor,root){var sel=window.getSelection();var next=document.createRange();next.selectNodeContents(root||editor);sel.removeAllRanges();sel.addRange(next);savedRichRange=next.cloneRange()}
-function wrapRichRange(range,styles){var span=document.createElement("span");for(var key in styles)span.style[key]=styles[key];try{range.surroundContents(span)}catch(e){var frag=range.extractContents();span.appendChild(frag);range.insertNode(span)}var sel=window.getSelection();var next=document.createRange();next.selectNodeContents(span);sel.removeAllRanges();sel.addRange(next);savedRichRange=next.cloneRange();return span}
-function applyRichAction(editorId,action){var editor=document.getElementById(editorId);if(!editor)return;activeRichEditor=editor;var range=restoreRichRange(editor);var selected=!!(range&&!range.collapsed);if(!range){range=document.createRange();range.selectNodeContents(editor);selected=false}var style=getRichStyle(editor,range);if(action==="bold"){if(selected){wrapRichRange(range,{fontWeight:style.bold?"normal":"700"})}else{var root=ensureRichRoot(editor);root.style.fontWeight=style.bold?"normal":"700";selectRichRoot(editor,root)}}else{var nextSize=Math.max(8,Math.min(72,style.size+(action==="size-down"?-2:2)));if(selected){wrapRichRange(range,{fontSize:nextSize+"px"})}else{var fieldRoot=ensureRichRoot(editor);fieldRoot.style.fontSize=nextSize+"px";selectRichRoot(editor,fieldRoot)}}saveDocumentData();updateRichToolbarState(editor)}
-document.addEventListener("selectionchange",syncRichSelection);
-document.addEventListener("focusin",function(e){var editor=e.target.closest?e.target.closest(".doc-editor"):null;if(editor){activeRichEditor=editor;updateRichToolbarState(editor)}});
-document.addEventListener("click",function(e){var btn=e.target.closest?e.target.closest("[data-rich-action]"):null;if(!btn)return;e.preventDefault();var toolbar=btn.closest(".rich-toolbar");if(toolbar)applyRichAction(toolbar.dataset.editor,btn.dataset.richAction)});
+var richEditSequence=0;
+function richToolbarMousedown(e){
+// Buttons keep the text selection; native inputs must still receive focus.
+if(e.target.closest('button')){e.preventDefault();return false}
+return true
+}
+function getRichEditorForNode(node){if(!node)return null;var el=node.nodeType===1?node:node.parentElement;return el?el.closest('.doc-editor'):null}
+function syncRichSelection(){
+var sel=window.getSelection();if(!sel||!sel.rangeCount)return;
+var range=sel.getRangeAt(0);var editor=getRichEditorForNode(range.startContainer);
+if(!editor||!editor.contains(range.endContainer))return;
+activeRichEditor=editor;savedRichRange=range.cloneRange();updateRichToolbarState(editor)
+}
+function restoreRichRange(editor){
+var sel=window.getSelection();
+if(savedRichRange&&editor.contains(savedRichRange.startContainer)&&editor.contains(savedRichRange.endContainer)){
+sel.removeAllRanges();sel.addRange(savedRichRange);return sel.getRangeAt(0).cloneRange()}
+return null
+}
+function getRichNode(editor,range){
+var node=range?range.startContainer:editor;
+if(node.nodeType===1&&range){
+var child=node.childNodes[range.startOffset];
+if(child){node=child;while(node.firstChild)node=node.firstChild}
+else if(range.startOffset>0&&node.childNodes.length){node=node.lastChild;while(node.lastChild)node=node.lastChild}
+}
+var el=node.nodeType===1?node:node.parentElement;return el&&editor.contains(el)?el:editor
+}
+function getRichStyle(editor,range){var cs=window.getComputedStyle(getRichNode(editor,range));return{size:Math.max(8,Math.min(72,Math.round(parseFloat(cs.fontSize)||14))),bold:parseInt(cs.fontWeight,10)>=600||cs.fontWeight==='bold',color:cs.color}}
+function richColorHex(color){var parts=color.match(/\d+/g);return parts&&parts.length>=3?'#'+parts.slice(0,3).map(function(v){return Number(v).toString(16).padStart(2,'0')}).join(''):'#e8eaed'}
+function updateRichToolbarState(editor){
+editor=editor||activeRichEditor;if(!editor)return;
+var range=savedRichRange;if(range&&!editor.contains(range.startContainer))range=null;
+var style=getRichStyle(editor,range);var toolbar=document.querySelector('.rich-toolbar[data-editor="'+editor.id+'"]');if(!toolbar)return;
+var size=toolbar.querySelector('[data-rich-size-input]');if(size&&document.activeElement!==size)size.value=style.size;
+var color=toolbar.querySelector('[data-rich-color]');if(color&&document.activeElement!==color)color.value=richColorHex(style.color);
+var bold=toolbar.querySelector('[data-rich-action="bold"]');if(bold){bold.classList.toggle('active',style.bold);bold.setAttribute('aria-pressed',String(style.bold))}
+}
+function ensureRichRoot(editor){var root=editor.querySelector('[data-rich-root="1"]');if(!root){root=document.createElement('div');root.setAttribute('data-rich-root','1');while(editor.firstChild)root.appendChild(editor.firstChild);editor.appendChild(root)}return root}
+function selectRichRoot(editor,root){var next=document.createRange();next.selectNodeContents(root||editor);var sel=window.getSelection();sel.removeAllRanges();sel.addRange(next);savedRichRange=next.cloneRange()}
+function insertRichHTML(editor,range,html){
+editor.focus();var sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+// Native insertion keeps paste and formatting in the browser's undo history.
+if(!document.execCommand('insertHTML',false,html)){
+range.deleteContents();var fragment=range.createContextualFragment(html);var last=fragment.lastChild;range.insertNode(fragment);
+if(last){range.setStartAfter(last);range.collapse(true);sel.removeAllRanges();sel.addRange(range)}
+}
+}
+function richTextColor(element,editor){
+for(var el=element;el&&el!==editor;el=el.parentElement){
+var color=el.style.color;
+if(color==='var(--text)')return 'var(--text)';
+if((color&&color!=='inherit')||el.hasAttribute('color'))return window.getComputedStyle(el).color
+}
+return 'var(--text)'
+}
+function selectedRichStyles(editor,range){
+var styles=[];var walker=document.createTreeWalker(editor,NodeFilter.SHOW_TEXT);var node;
+while((node=walker.nextNode())){
+if(!node.nodeValue||!range.intersectsNode(node))continue;
+var start=range.startContainer===node?range.startOffset:0;
+var end=range.endContainer===node?range.endOffset:node.length;
+if(start>=end)continue;
+var cs=window.getComputedStyle(node.parentElement);
+styles.push({fontSize:cs.fontSize,fontWeight:cs.fontWeight,fontStyle:cs.fontStyle,color:richTextColor(node.parentElement,editor)})
+}
+return styles
+}
+function applyRichAction(editorId,action,value){
+var editor=document.getElementById(editorId);if(!editor)return;
+var range=restoreRichRange(editor);if(!range||range.collapsed){range=document.createRange();range.selectNodeContents(editor)}
+var style=getRichStyle(editor,range);var property;var next;
+if(action==='bold'){property='fontWeight';next=style.bold?'400':'700'}
+else if(action==='color'){if(!/^#[0-9a-f]{6}$/i.test(value||''))return;property='color';next=value}
+else{var size=action==='size'?Number(value):style.size+(action==='size-down'?-2:2);if(!Number.isFinite(size))return;property='fontSize';next=Math.max(8,Math.min(72,Math.round(size)))+'px'}
+activeRichEditor=editor;
+if(range.collapsed){var root=ensureRichRoot(editor);root.style[property]=next;selectRichRoot(editor,root)}
+else{
+var originalStyles=selectedRichStyles(editor,range);
+var fragment=range.cloneContents();var walker=document.createTreeWalker(fragment,NodeFilter.SHOW_TEXT);var nodes=[];var node;
+while((node=walker.nextNode()))if(node.nodeValue)nodes.push(node);
+if(!nodes.length)return;
+var token='rich-'+(++richEditSequence);
+nodes.forEach(function(text,index){var span=document.createElement('span');var original=originalStyles[index]||{};Object.keys(original).forEach(function(key){span.style[key]=original[key]});span.style[property]=next;span.dataset.richEdit=token;text.parentNode.replaceChild(span,text);span.appendChild(text)});
+var container=document.createElement('div');container.appendChild(fragment);
+insertRichHTML(editor,range,container.innerHTML);
+var applied=editor.querySelectorAll('[data-rich-edit="'+token+'"]');
+if(applied.length){var selected=document.createRange();selected.setStart(applied[0],0);var last=applied[applied.length-1];selected.setEnd(last,last.childNodes.length);var sel=window.getSelection();sel.removeAllRanges();sel.addRange(selected);savedRichRange=selected.cloneRange();applied.forEach(function(el){el.removeAttribute('data-rich-edit')})}
+}
+saveDocumentData();updateRichToolbarState(editor)
+}
+function pasteEditorText(event,editor){
+var clipboard=event.clipboardData;if(!clipboard)return;
+var text=clipboard.getData('text/plain');
+if(!text){if(Array.from(clipboard.types||[]).some(function(type){return /^text\//.test(type)}))event.preventDefault();return}
+event.preventDefault();syncRichSelection();var range=restoreRichRange(editor);
+if(!range){range=document.createRange();range.selectNodeContents(editor);range.collapse(false)}
+var span=document.createElement('span');
+span.style.cssText='font-family:var(--font);font-size:14px;font-weight:400;font-style:normal;color:var(--text);white-space:pre-wrap';
+span.textContent=text.replace(/\r\n?/g,'\n').replace(/\u00a0/g,' ');
+insertRichHTML(editor,range,span.outerHTML);syncRichSelection();saveDocumentData()
+}
+document.addEventListener('selectionchange',syncRichSelection);
+document.addEventListener('focusin',function(e){var editor=e.target.closest?e.target.closest('.doc-editor'):null;if(editor){activeRichEditor=editor;updateRichToolbarState(editor)}});
+document.addEventListener('paste',function(e){var editor=e.target.closest?e.target.closest('.doc-editor'):null;if(editor)pasteEditorText(e,editor)});
+document.addEventListener('click',function(e){var btn=e.target.closest?e.target.closest('[data-rich-action]'):null;if(!btn)return;e.preventDefault();var toolbar=btn.closest('.rich-toolbar');if(toolbar)applyRichAction(toolbar.dataset.editor,btn.dataset.richAction)});
+document.addEventListener('change',function(e){var input=e.target;if(input.matches('[data-rich-size-input]'))applyRichAction(input.dataset.richSizeInput,'size',input.value);if(input.matches('[data-rich-color]'))applyRichAction(input.dataset.richColor,'color',input.value)});
 function extractRichLines(id){
 var root=document.getElementById(id);if(!root)return [];
-var base=window.getComputedStyle(root);var baseStyle={size:parseFloat(base.fontSize)||14,bold:parseInt(base.fontWeight,10)>=600||base.fontWeight==="bold"};
+var base=window.getComputedStyle(root);var baseStyle={size:parseFloat(base.fontSize)||14,bold:parseInt(base.fontWeight,10)>=600||base.fontWeight==="bold",color:null};
 var lines=[[]];
 function breakLine(){if(lines[lines.length-1].length)lines.push([])}
-function addRun(text,style){if(!text)return;var current=lines[lines.length-1];var last=current[current.length-1];if(last&&last.size===style.size&&last.bold===style.bold){last.text+=text}else{current.push({text:text,size:style.size,bold:style.bold})}}
+function addRun(text,style){if(!text)return;var current=lines[lines.length-1];var last=current[current.length-1];if(last&&last.size===style.size&&last.bold===style.bold&&last.color===style.color){last.text+=text}else{current.push({text:text,size:style.size,bold:style.bold,color:style.color})}}
 function addText(value,style){var parts=String(value||"").replace(/\r/g,"").split("\n");for(var i=0;i<parts.length;i++){if(i>0)lines.push([]);addRun(parts[i],style)}}
 function walk(node,inherited){
 if(node.nodeType===3){addText(node.nodeValue,inherited);return}
@@ -664,7 +802,10 @@ var cs=window.getComputedStyle(node);
 if(cs.display==="none")return;
 var size=parseFloat(cs.fontSize)||inherited.size;
 var bold=cs.fontWeight==="bold"||parseInt(cs.fontWeight,10)>=600;
-var style={size:size,bold:bold};
+var color=inherited.color;
+if(node.style.color&&node.style.color!=='inherit')color=node.style.color==='var(--text)'?null:cs.color;
+else if(node.hasAttribute("color"))color=cs.color;
+var style={size:size,bold:bold,color:color};
 var block=/^(DIV|P|LI|UL|OL|H[1-6]|TR|BLOCKQUOTE)$/.test(tag);
 if(block)breakLine();
 for(var i=0;i<node.childNodes.length;i++)walk(node.childNodes[i],style);
@@ -689,7 +830,7 @@ for(var c=0;c<chars.length;c++){
 var ch=chars[c];ctx.font=richFont(run);var w=ctx.measureText(ch).width;
 if(current.width+w>maxWidth&&current.runs.length){out.push(current);current={runs:[],width:0,maxSize:14}}
 var last=current.runs[current.runs.length-1];
-if(last&&last.size===run.size&&last.bold===run.bold){last.text+=ch}else{current.runs.push({text:ch,size:run.size,bold:run.bold})}
+if(last&&last.size===run.size&&last.bold===run.bold&&last.color===run.color){last.text+=ch}else{current.runs.push({text:ch,size:run.size,bold:run.bold,color:run.color})}
 current.width+=w;current.maxSize=Math.max(current.maxSize,run.size)
 }}
 if(current.runs.length)out.push(current)
@@ -703,12 +844,26 @@ var drawCtx=context;
 drawCtx.textBaseline="top";
 for(var i=0;i<layout.length;i++){
 var line=layout[i];var xx=x;
-if(line.runs&&line.runs.length){for(var r=0;r<line.runs.length;r++){var run=line.runs[r];drawCtx.font=richFont(run);drawCtx.fillStyle=color;drawCtx.fillText(run.text,xx,y);xx+=drawCtx.measureText(run.text).width}}
+if(line.runs&&line.runs.length){for(var r=0;r<line.runs.length;r++){var run=line.runs[r];drawCtx.font=richFont(run);drawCtx.fillStyle=run.color||color;drawCtx.fillText(run.text,xx,y);xx+=drawCtx.measureText(run.text).width}}
 y+=richLineHeight(line)
 }
 drawCtx.textBaseline="alphabetic";return y
 }
 async function generateImage(){
+if(!docContext){alert(tr('openDocFirst'));return}
+saveDocumentData();
+await document.fonts.ready;
+var slot=data[docContext.cat][docContext.index];
+var model=CoursePreview.summarize({name:slot.name,subtitle:slot.subtitle,objectives:editorText('doc-objectives'),procedure:editorText('doc-procedure')});
+var date=new Date().toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'});
+var canvas=CoursePreview.render(model,{code:catLabel(docContext.cat)+' · '+pad(docContext.index+1),date:date},function(){return document.createElement('canvas')});
+var filename='makex_preview_'+docContext.cat+'_'+pad(docContext.index+1)+'.png';
+var blob=await new Promise(function(resolve){canvas.toBlob(resolve,'image/png')});
+if(!blob){showToast('图片生成失败，请重试');return}
+try{if(!navigator.clipboard||typeof ClipboardItem==='undefined')throw Error();await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);showToast(tr('imageCopied'))}
+catch(error){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000);showToast(tr('imageDownloaded'))}
+}
+async function generateFullDocumentImage(){
 if(!docContext){alert(tr('openDocFirst'));return}
 saveDocumentData()
 var slot=data[docContext.cat][docContext.index];var info=CATS[docContext.cat];var infoLabel=catLabel(docContext.cat);var sn=pad(docContext.index+1)
@@ -972,7 +1127,7 @@ var content='[MakeX] '+CATS[cat].label+' - Slot '+slotNum+'\n课程名称: '+nam
 var blob=new Blob([content],{type:'text/plain;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
 
 /* ===== DOCUMENT EDITOR ===== */
-function openDocument(cat,index){docContext={cat:cat,index:index};var slot=data[cat][index];var info=CATS[cat];var slotNum=pad(index+1)
+function openDocument(cat,index){activeRichEditor=null;savedRichRange=null;docContext={cat:cat,index:index};var slot=data[cat][index];var info=CATS[cat];var slotNum=pad(index+1)
 document.getElementById('doc-badge').textContent=catLabel(cat)+' · '+slotNum
 document.getElementById('doc-title-display').textContent=slot.name||tr('newCourse')
 document.getElementById('doc-name').value=slot.name||''
@@ -1019,6 +1174,8 @@ document.documentElement.lang=currentLang==='en'?'en':'zh-CN';
 var i,el,key;
 var nodes=document.querySelectorAll('[data-i18n]');
 for(i=0;i<nodes.length;i++){key=nodes[i].getAttribute('data-i18n');if(key)nodes[i].textContent=tr(key)}
+var richLabels=document.querySelectorAll('[data-i18n-aria]');
+for(i=0;i<richLabels.length;i++)richLabels[i].setAttribute('aria-label',tr(richLabels[i].getAttribute('data-i18n-aria')));
 var placeholders=document.querySelectorAll('[data-i18n-placeholder]');
 for(i=0;i<placeholders.length;i++){key=placeholders[i].getAttribute('data-i18n-placeholder');if(!key)continue;var value=tr(key);if(placeholders[i].hasAttribute('contenteditable'))placeholders[i].setAttribute('data-placeholder',value);else placeholders[i].setAttribute('placeholder',value)}
 var titles=document.querySelectorAll('[data-i18n-title]');
@@ -1096,6 +1253,7 @@ function removePpt(i){if(!docContext)return;var slot=data[docContext.cat][docCon
 <div class="save-indicator" id="save-indicator"><span class="dot"></span><span data-i18n="autoSave">自动保存</span></div>
 <div class="shortcut-hint" id="shortcut-hint" data-i18n="shortcutHint">Ctrl+S 保存 · Ctrl+P 打印 · Ctrl+F 搜索</div>
 <div class="toast-container" id="toast-container"></div>
+<script src="course-preview.js"></script>
 <script src="school-knowledge.js"></script>
 <script src="course-images.js"></script>
 <script src="git-sync-client.js"></script>

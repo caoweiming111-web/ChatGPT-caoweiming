@@ -181,7 +181,7 @@ const sv = http.createServer(function (req, res) {
   }
 
   // A single explicit static asset keeps direct-file and server usage aligned.
-  if (['/school-knowledge.js', '/course-images.js', '/git-sync-client.js'].includes(u.pathname) && req.method === 'GET') {
+  if (['/course-preview.js', '/school-knowledge.js', '/course-images.js', '/git-sync-client.js'].includes(u.pathname) && req.method === 'GET') {
     try {
       const script = fs.readFileSync(path.join(DIR, u.pathname.slice(1)), 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/javascript;charset=utf-8', 'Cache-Control': 'no-cache' });
