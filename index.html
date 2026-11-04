@@ -824,7 +824,7 @@ var compact=[];for(var j=0;j<lines.length;j++){if(!lines[j].length&&compact.leng
 if(!compact.length)compact.push([{text:tr("notFilled"),size:14,bold:false}]);
 return compact
 }
-function richFont(run){return (run.bold?"bold ":"")+Math.max(8,Math.round(run.size))+'px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'}
+function richFont(run){return (run.bold?"bold ":"")+Math.max(8,Math.round(run.size))+'px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'}
 function layoutRichLines(lines,maxWidth,ctx){
 var out=[];
 for(var i=0;i<lines.length;i++){
@@ -856,8 +856,8 @@ y+=richLineHeight(line)
 }
 drawCtx.textBaseline="alphabetic";return y
 }
-var previewImageState={busy:false,blob:null,url:null,filename:''};
-function previewStatus(text){document.getElementById('training-preview-status').textContent=text}
+var previewImageState={busy:false,blob:null,url:null,filename:'',warnings:[],generatedAt:''};
+function previewStatus(text){document.getElementById('training-preview-status').textContent=text+(previewImageState.generatedAt?' 本次生成：'+previewImageState.generatedAt:'')+(previewImageState.warnings.length?' '+previewImageState.warnings.join(' '):'')}
 function closeTrainingPreview(){var dialog=document.getElementById('training-preview-dialog');if(dialog.close)dialog.close();else dialog.removeAttribute('open')}
 function previewDeadline(promise,ms){return new Promise(function(resolve,reject){var timer=setTimeout(function(){reject(Error('操作超时'))},ms);Promise.resolve(promise).then(function(value){clearTimeout(timer);resolve(value)},function(error){clearTimeout(timer);reject(error)})})}
 function downloadTrainingPreview(){
@@ -880,7 +880,7 @@ var dialog=document.getElementById('training-preview-dialog');
 var image=document.getElementById('training-preview-image');
 var buttons=[document.getElementById('training-preview-copy'),document.getElementById('training-preview-download')];
 if(previewImageState.url)URL.revokeObjectURL(previewImageState.url);
-previewImageState.url=null;previewImageState.blob=null;image.hidden=true;image.removeAttribute('src');buttons.forEach(function(b){b.disabled=true});
+previewImageState.url=null;previewImageState.blob=null;previewImageState.warnings=[];previewImageState.generatedAt='';image.hidden=true;image.removeAttribute('src');buttons.forEach(function(b){b.disabled=true});
 if(!dialog.open){if(dialog.showModal)dialog.showModal();else dialog.setAttribute('open','')}
 dialog.scrollTop=0;previewStatus('正在提取课程重点并生成图片…');
 try{
@@ -888,13 +888,16 @@ if(!window.CoursePreview||typeof CoursePreview.render!=='function')throw Error('
 // Snapshot before awaiting fonts so navigation cannot select a different lesson.
 var context={cat:docContext.cat,index:docContext.index};
 var model=CoursePreview.summarize({name:document.getElementById('doc-name').value,subtitle:document.getElementById('doc-subtitle').value,objectives:editorText('doc-objectives'),procedure:editorText('doc-procedure')});
+previewImageState.warnings=model.warnings||[];
 var saved=true;try{saveDocumentData()}catch(error){saved=false}
-if(document.fonts&&document.fonts.ready){try{await previewDeadline(document.fonts.ready,1000)}catch(error){/* Use available system fonts if optional fonts are still loading. */}}
+if(document.fonts){try{await previewDeadline(CoursePreview.prepareFonts(document.fonts,model),1500)}catch(error){/* Keep the installed system fallback when optional fonts cannot load. */}}
 var date=new Date().toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'});
 var canvas=CoursePreview.render(model,{code:catLabel(context.cat)+' · '+pad(context.index+1),date:date},function(){return document.createElement('canvas')});
 var blob=await previewDeadline(new Promise(function(resolve){canvas.toBlob(resolve,'image/png')}),10000);
 if(!blob)throw Error('EMPTY_IMAGE');
-previewImageState.blob=blob;previewImageState.filename='makex_preview_'+context.cat+'_'+pad(context.index+1)+'.png';previewImageState.url=URL.createObjectURL(blob);
+var now=new Date();previewImageState.generatedAt=now.toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false});
+var stamp=now.toLocaleString('sv-SE',{timeZone:'Asia/Shanghai',hour12:false}).replace(/[^0-9]/g,'');
+previewImageState.blob=blob;previewImageState.filename='makex_preview_'+context.cat+'_'+pad(context.index+1)+'_'+stamp+'.png';previewImageState.url=URL.createObjectURL(blob);
 image.src=previewImageState.url;image.hidden=false;buttons.forEach(function(b){b.disabled=false});previewStatus('图片已生成，可查看下方预览，复制或下载。');
 if(!await copyTrainingPreview())downloadTrainingPreview();
 if(!saved)previewStatus('图片已生成，但课程数据保存失败。请先下载图片并备份课程数据。')
@@ -918,7 +921,7 @@ if(cur)total+=lh2}
 return total}
 
 var tmpC=document.createElement('canvas');var tctx=tmpC.getContext('2d')
-tctx.font='14px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
+tctx.font='14px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'
 var fw=cw-24-24
 var objLines=layoutRichLines(extractRichLines('doc-objectives'),fw,tctx)
 var proLines=layoutRichLines(extractRichLines('doc-procedure'),fw,tctx)
@@ -934,7 +937,7 @@ courseImageLayouts.forEach(function(item){
 item.captionLines=item.caption?layoutRichLines(item.caption.split(/\r?\n/).map(function(line){return [{text:line,size:14,bold:false}]}),fw,tctx):[];
 courseImagesH+=item.height+richLayoutHeight(item.captionLines)+24;
 });
-tctx.font='14px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif';
+tctx.font='14px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
 function fh(v,mw){return 14+Math.max(wrapH(v||tr('notFilled'),mw,tctx,lh),lh)}
 var hh=82
 var infoH=20+fh(name,fw)+fh(subtitle,fw)+fh(eq,fw)+8
@@ -978,14 +981,14 @@ var x=cx0+24
 
 // Section helper
 function secTitle(label,x2,y2,color){
-cx.font='bold 15px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
+cx.font='bold 15px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'
 cx.fillStyle=color;cx.fillText(label,x2,y2)
 // underline
 cx.strokeStyle=color+'44';cx.lineWidth=2;cx.beginPath();cx.moveTo(x2,y2+4);cx.lineTo(x2+150,y2+4);cx.stroke()
 return y2+18}
 
 function drawText(text,x2,y2,maxW,color,size){
-cx.font=size+'px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif';cx.fillStyle=color
+cx.font=size+'px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';cx.fillStyle=color
 var lines=text.split('\n');var cy=y2
 for(var l=0;l<lines.length;l++){var line=lines[l];if(!line.trim()){cy+=lh*0.3;continue}
 var cur='';for(var c=0;c<line.length;c++){var test=cur+line[c]
@@ -996,14 +999,14 @@ return cy}
 function secLabel(label,x2,y2,color){
 // colored left bar
 cx.fillStyle=color;cx.fillRect(x2-8,y2-10,3,18)
-cx.font='bold 14px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
+cx.font='bold 14px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'
 cx.fillStyle=color;cx.fillText(label,x2,y2+2)
 return y2+20}
 
 function drawField(label,value,x2,y2,mw,color){
-cx.font='12px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
+cx.font='12px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'
 cx.fillStyle='#7a8aa0';cx.fillText(label,x2,y2-2)
-cx.font='14px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
+cx.font='14px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'
 cx.fillStyle=color||'#e0e4ea'
 var lines=value.split('\n');var cy=y2+18
 for(var l=0;l<lines.length;l++){var line=lines[l];if(!line.trim()){cy+=lh*0.3;continue}
@@ -1016,14 +1019,14 @@ return cy}
 var ypos=y
 
 // MakeX header
-cx.font='bold 13px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
+cx.font='bold 13px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'
 cx.fillStyle='#556688';cx.fillText('MAKX',x,ypos);ypos+=4
-cx.font='24px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
+cx.font='24px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'
 var tg2=cx.createLinearGradient(x,0,x+300,0);tg2.addColorStop(0,catColor);tg2.addColorStop(0.5,catColor+'aa');tg2.addColorStop(1,'#e0e4ea')
 cx.fillStyle=tg2;cx.fillText(name,x,ypos+30);ypos+=40
 
 // Category badge
-cx.font='11px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
+cx.font='11px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'
 cx.fillStyle=catColor+'88'
 var badge=infoLabel+' · Slot '+sn
 cx.fillText(badge,x,ypos+4);ypos+=10
@@ -1070,7 +1073,7 @@ ypos=drawRichLines(knowledgeLines,x,ypos,fw,'#e0e4ea',cx);
 ypos=Math.max(ypos+24,Math.max(200,82+hh+infoH+objH+proH+80))
 cx.strokeStyle='rgba(41,121,255,0.06)';cx.lineWidth=1
 cx.beginPath();cx.moveTo(x,ypos);cx.lineTo(x+cw-48,ypos);cx.stroke()
-cx.font='11px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif';cx.fillStyle='#556688'
+cx.font='11px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';cx.fillStyle='#556688'
 var now=new Date();var ds=now.toLocaleDateString(uiLocale(),{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'})
 cx.fillText(ds+' · MakeX · '+infoLabel,x,ypos+20)
 
@@ -1298,7 +1301,106 @@ function removePpt(i){if(!docContext)return;var slot=data[docContext.cat][docCon
   <img id="training-preview-image" alt="当前课程的训练预告图片" hidden>
   <footer><button id="training-preview-copy" type="button" class="btn-secondary" onclick="copyTrainingPreview()" disabled>复制图片</button><button id="training-preview-download" type="button" class="btn-primary" onclick="downloadTrainingPreview()" disabled>下载 PNG 图片</button></footer>
 </dialog>
-<script src="course-preview.js"></script>
+<script id="course-preview-runtime">
+/* Training preview: extract course text locally; no external model or invented outcomes. */
+(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.CoursePreview=api})(typeof globalThis!=='undefined'?globalThis:this,function(){
+'use strict';
+// Keep blackface text, with explicit CJK, symbol and emoji fallbacks for missing glyphs.
+const FONT_FAMILY='"SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+function wordMarkers(value){return String(value||'').replace(/^[ \t]*[\uf0b7\uf0a7\uf0fc\uf0d8][ \t]*/gm,'')}
+function unreadable(ch){
+const n=ch.codePointAt(0);
+return (n>=0xd800&&n<=0xdfff)||n===0xfffd||n===0xfffc||(n>=0xe000&&n<=0xf8ff)||(n>=0xf0000&&n<=0xffffd)||(n>=0x100000&&n<=0x10fffd)||(n>=0xfdd0&&n<=0xfdef)||(n&0xffff)===0xfffe||(n&0xffff)===0xffff
+}
+function textWarnings(course){
+const count=['name','subtitle','objectives','procedure'].reduce((n,key)=>n+Array.from(wordMarkers(course[key])).filter(unreadable).length,0);
+return count?['原文中有 '+count+' 个无法识别的特殊字符，预告已跳过；请核对内容，原课程未修改。']:[]
+}
+async function prepareFonts(fonts,model){
+if(!fonts||typeof fonts.load!=='function')return;
+const sample=[model.title,model.subtitle,model.focus,model.intro].concat(model.growth,model.steps.map(s=>s.title+' '+s.body)).join(' ')+'训练预告课堂流程成长收获';
+await Promise.all([fonts.load('24px '+FONT_FAMILY,sample),fonts.load('bold 30px '+FONT_FAMILY,sample)])
+}
+// Clean only the generated copy. Never rewrite the teacher's course data or guess lost characters.
+function clean(value){
+return Array.from(wordMarkers(value)).filter(ch=>!unreadable(ch)).join('')
+.replace(/\r\n?/g,'\n').replace(/[\u2028\u2029]/g,'\n').replace(/\u00a0/g,' ')
+.replace(/[\ufffd\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/g,'')
+.replace(/^[ \t]*\*+\s+/gm,'').replace(/\*\*(\S(?:[^*]*?\S)?)\*\*(?=$|[\s，。；、:：!?！？）)])/g,'$1').replace(/`([^`\n]+)`/g,'$1').trim()
+}
+function lines(value){return clean(value).split('\n').map(s=>s.trim()).filter(Boolean)}
+const listPrefix=/^(?:(?:第?[一二三四五六七八九十]+|\d{1,2})(?:[、)）]|[.．](?!\d))|[（(](?:\d{1,2}|[一二三四五六七八九十]+)[)）]|[①-⑳])\s*/;
+function numbered(s){return listPrefix.test(s)}
+function strip(s){return clean(s).replace(/^#{1,6}\s+/,'').replace(/^(?:\*+|[·•●▪■◆◇▶►])\s*/,'').replace(/^[-+]\s+(?!\d)/,'').replace(listPrefix,'').trim()}
+function short(s,n){const chars=Array.from(clean(s).replace(/\s+/g,' '));return chars.length>n?chars.slice(0,n-1).join('')+'…':chars.join('')}
+function goalHeading(s){return /^(?:(?:课程|教学|学习|训练|知识|技能|能力|情感|态度|素养|实践|实操|认知|创新|拓展|成长|课堂|基本)[\s／/与及、和]*){0,4}(?:目标|流程|收获|步骤|要求)[：:]?$/.test(strip(s))}
+function points(text){
+const all=lines(text).filter(s=>!goalHeading(s)&&strip(s));
+const primary=all.filter(numbered);
+const result=(primary.length?primary:all).map(strip);
+return Array.from(new Set(result)).filter(Boolean)
+}
+function cardTitle(s){return strip(s).replace(/^完成/,'').replace(/^在机器人上/,'').replace(/^通过程序来/,'').trim()}
+function excerpt(s,limit){
+s=clean(s).replace(/^[^：:]{1,8}[：:]\s*/,'');
+const clauses=s.split(/[，,；;。]/).map(clean).filter(Boolean);let out='';
+for(const clause of clauses){const next=out?out+'，'+clause:clause;if(next.length>limit){if(!out)out=short(clause,limit);break}out=next}
+return out
+}
+function cardBody(group,limit){
+const meaningful=group.body.filter(s=>s&&!/^[^：:]{1,8}[：:]$/.test(s));
+const chosen=meaningful.length>1?[meaningful[0],meaningful[meaningful.length-1]]:meaningful;
+return chosen.map(s=>excerpt(s,limit||34)).join('；')
+}
+function steps(text){
+const all=lines(text).filter(s=>! /^(课程基本流程|教学流程|课堂流程)[：:]?$/.test(s));
+const chinese=all.some(s=>/^[一二三四五六七八九十]+[、.．]/.test(s));
+const groups=[];let last=0;let nested=false;
+for(const s of all){const m=s.match(/^(\d{1,2})(?:[、)）]|[.．](?!\d))/);let heading=chinese?/^[一二三四五六七八九十]+[、.．]/.test(s):numbered(s);
+if(!chinese&&m){const num=Number(m[1]);if(num<=last)nested=true;if(nested)heading=false;else last=num}
+if(heading||!groups.length)groups.push({title:strip(s),body:[]});else groups[groups.length-1].body.push(strip(s));
+}
+if(groups.length===1&&!groups[0].body.length)return [{title:short(groups[0].title,32),body:''}];
+// Keep the whole sequence represented; adjacent stages share a card for long lessons.
+const cards=[];const count=Math.min(4,groups.length);
+for(let i=0;i<count;i++){const from=Math.floor(i*groups.length/count),to=Math.floor((i+1)*groups.length/count);const chunk=groups.slice(from,to);cards.push({title:short(chunk.map(g=>cardTitle(g.title)).join(' · '),32),body:chunk.map(g=>cardBody(g,chunk.length>1?20:34)||g.title).join('；')})}
+return cards
+}
+function summarize(course){const goals=points(course.objectives);const cards=steps(course.procedure);return {warnings:textWarnings(course),title:clean(course.name)||'未命名课程',subtitle:short(course.subtitle,100),focus:short(goals[0]||course.subtitle||course.name,100),intro:short(goals.slice(1,3).join('；')||course.subtitle,240),steps:cards.length?cards:[{title:'课堂流程待补充',body:'请在课程中填写教学流程后重新生成。'}],growth:goals.length?goals.slice(0,3).map(s=>short(s,100)):['课程目标待补充，请完善课程后重新生成。']}}
+function render(model,meta,createCanvas){
+const W=1000,pad=56,gap=20,col=(W-pad*2-gap)/2;
+const cv=createCanvas();cv.width=W;cv.height=1;let ctx=cv.getContext('2d');
+const font=FONT_FAMILY;
+function wrap(text,size,width,bold){ctx.font=(bold?'bold ':'')+size+'px '+font;const out=[];for(const para of String(text||'').split('\n')){let line='';for(const ch of Array.from(para)){if(line&&ctx.measureText(line+ch).width>width){out.push(line);line=ch}else line+=ch}if(line)out.push(line)}return out}
+const title=wrap(model.title,44,640,true),sub=wrap(model.subtitle,25,640,false);
+const headerH=Math.max(184,54+title.length*57+sub.length*38);
+const focus=wrap(model.focus,26,W-pad*2,true),intro=wrap(model.intro,24,W-pad*2,false);
+const introH=focus.length*40+(intro.length?18+intro.length*39:0);
+const cards=model.steps.map((s,i)=>{const title=wrap((i+1)+'  '+s.title,26,col-48,true),body=wrap(s.body,23,col-48,false);return {title,body,height:48+title.length*38+(body.length?12+body.length*36:0)}});
+const rows=[];for(let i=0;i<cards.length;i+=2)rows.push(Math.max(cards[i].height,cards[i+1]?cards[i+1].height:0,154));
+const growth=model.growth.map(s=>wrap(s,24,W-pad*2-56,false));
+const growthH=40+growth.reduce((h,g)=>h+g.length*38+12,0);
+const H=Math.ceil(headerH+44+52+introH+40+52+rows.reduce((a,b)=>a+b+gap,0)+20+52+growthH+48);
+cv.height=H;ctx=cv.getContext('2d');ctx.textBaseline='top';
+function roundedPath(x,y,w,h,r){
+ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath()
+}
+function round(x,y,w,h,r,color){roundedPath(x,y,w,h,r);ctx.fillStyle=color;ctx.fill()}
+function text(ls,x,y,size,color,bold,lineH){ctx.font=(bold?'bold ':'')+size+'px '+font;ctx.fillStyle=color;for(const line of ls){ctx.fillText(line,x,y);y+=lineH}return y}
+ctx.fillStyle='#e4eaea';ctx.fillRect(0,0,W,H);round(8,8,W-16,H-16,32,'#fffef5');
+ctx.save();roundedPath(8,8,W-16,H-16,32);ctx.clip();ctx.fillStyle='#194e51';ctx.fillRect(8,8,W-16,headerH);ctx.restore();
+let y=text(title,pad,48,44,'#ffffff',true,57);text(sub,pad,y+12,25,'#c9e1df',false,38);
+ctx.textAlign='right';text(['训练预告'],W-pad,52,25,'#d8c474',false,36);text([meta.code],W-pad,97,19,'#d0e2df',false,29);text(['生成于 '+meta.date],W-pad,128,18,'#d0e2df',false,28);ctx.textAlign='left';
+function section(n,label,y){text([n],pad,y+3,24,'#53777a',true,32);ctx.fillStyle='#c4af60';ctx.fillRect(pad,y+35,28,2);text([label],pad+48,y,30,'#193e43',true,42);return y+54}
+y=section('01','训练内容',headerH+44);y=text(focus,pad,y,26,'#255960',true,40);if(intro.length)y=text(intro,pad,y+18,24,'#41595b',false,39);
+y=section('02','课堂流程',y+40);
+for(let row=0;row<rows.length;row++){for(let j=0;j<2;j++){const card=cards[row*2+j];if(!card)continue;const x=pad+j*(col+gap);round(x,y,col,rows[row],18,'#eef3ed');const yy=text(card.title,x+24,y+24,26,'#25555a',true,38);text(card.body,x+24,yy+12,23,'#496062',false,36)}y+=rows[row]+gap}
+y=section('03','成长收获',y+20);round(pad,y,W-pad*2,growthH,18,'#fcf3d6');let gy=y+24;for(const g of growth)gy=text(g,pad+28,gy,24,'#4a5b54',false,38)+12;
+return cv
+}
+return {summarize,steps,points,render,prepareFonts,fontFamily:FONT_FAMILY};
+});
+</script>
 <script src="school-knowledge.js"></script>
 <script src="course-images.js"></script>
 <script src="git-sync-client.js"></script>

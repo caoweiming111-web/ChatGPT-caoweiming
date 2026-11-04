@@ -1,9 +1,25 @@
 /* Training preview: extract course text locally; no external model or invented outcomes. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.CoursePreview=api})(typeof globalThis!=='undefined'?globalThis:this,function(){
 'use strict';
+// Keep blackface text, with explicit CJK, symbol and emoji fallbacks for missing glyphs.
+const FONT_FAMILY='"SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+function wordMarkers(value){return String(value||'').replace(/^[ \t]*[\uf0b7\uf0a7\uf0fc\uf0d8][ \t]*/gm,'')}
+function unreadable(ch){
+const n=ch.codePointAt(0);
+return (n>=0xd800&&n<=0xdfff)||n===0xfffd||n===0xfffc||(n>=0xe000&&n<=0xf8ff)||(n>=0xf0000&&n<=0xffffd)||(n>=0x100000&&n<=0x10fffd)||(n>=0xfdd0&&n<=0xfdef)||(n&0xffff)===0xfffe||(n&0xffff)===0xffff
+}
+function textWarnings(course){
+const count=['name','subtitle','objectives','procedure'].reduce((n,key)=>n+Array.from(wordMarkers(course[key])).filter(unreadable).length,0);
+return count?['原文中有 '+count+' 个无法识别的特殊字符，预告已跳过；请核对内容，原课程未修改。']:[]
+}
+async function prepareFonts(fonts,model){
+if(!fonts||typeof fonts.load!=='function')return;
+const sample=[model.title,model.subtitle,model.focus,model.intro].concat(model.growth,model.steps.map(s=>s.title+' '+s.body)).join(' ')+'训练预告课堂流程成长收获';
+await Promise.all([fonts.load('24px '+FONT_FAMILY,sample),fonts.load('bold 30px '+FONT_FAMILY,sample)])
+}
 // Clean only the generated copy. Never rewrite the teacher's course data or guess lost characters.
 function clean(value){
-return Array.from(String(value||'')).filter(ch=>!(ch.length===1&&/[\ud800-\udfff]/.test(ch))).join('')
+return Array.from(wordMarkers(value)).filter(ch=>!unreadable(ch)).join('')
 .replace(/\r\n?/g,'\n').replace(/[\u2028\u2029]/g,'\n').replace(/\u00a0/g,' ')
 .replace(/[\ufffd\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/g,'')
 .replace(/^[ \t]*\*+\s+/gm,'').replace(/\*\*(\S(?:[^*]*?\S)?)\*\*(?=$|[\s，。；、:：!?！？）)])/g,'$1').replace(/`([^`\n]+)`/g,'$1').trim()
@@ -46,11 +62,11 @@ const cards=[];const count=Math.min(4,groups.length);
 for(let i=0;i<count;i++){const from=Math.floor(i*groups.length/count),to=Math.floor((i+1)*groups.length/count);const chunk=groups.slice(from,to);cards.push({title:short(chunk.map(g=>cardTitle(g.title)).join(' · '),32),body:chunk.map(g=>cardBody(g,chunk.length>1?20:34)||g.title).join('；')})}
 return cards
 }
-function summarize(course){const goals=points(course.objectives);const cards=steps(course.procedure);return {title:clean(course.name)||'未命名课程',subtitle:short(course.subtitle,100),focus:short(goals[0]||course.subtitle||course.name,100),intro:short(goals.slice(1,3).join('；')||course.subtitle,240),steps:cards.length?cards:[{title:'课堂流程待补充',body:'请在课程中填写教学流程后重新生成。'}],growth:goals.length?goals.slice(0,3).map(s=>short(s,100)):['课程目标待补充，请完善课程后重新生成。']}}
+function summarize(course){const goals=points(course.objectives);const cards=steps(course.procedure);return {warnings:textWarnings(course),title:clean(course.name)||'未命名课程',subtitle:short(course.subtitle,100),focus:short(goals[0]||course.subtitle||course.name,100),intro:short(goals.slice(1,3).join('；')||course.subtitle,240),steps:cards.length?cards:[{title:'课堂流程待补充',body:'请在课程中填写教学流程后重新生成。'}],growth:goals.length?goals.slice(0,3).map(s=>short(s,100)):['课程目标待补充，请完善课程后重新生成。']}}
 function render(model,meta,createCanvas){
 const W=1000,pad=56,gap=20,col=(W-pad*2-gap)/2;
 const cv=createCanvas();cv.width=W;cv.height=1;let ctx=cv.getContext('2d');
-const font='"SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif';
+const font=FONT_FAMILY;
 function wrap(text,size,width,bold){ctx.font=(bold?'bold ':'')+size+'px '+font;const out=[];for(const para of String(text||'').split('\n')){let line='';for(const ch of Array.from(para)){if(line&&ctx.measureText(line+ch).width>width){out.push(line);line=ch}else line+=ch}if(line)out.push(line)}return out}
 const title=wrap(model.title,44,640,true),sub=wrap(model.subtitle,25,640,false);
 const headerH=Math.max(184,54+title.length*57+sub.length*38);
@@ -78,5 +94,5 @@ for(let row=0;row<rows.length;row++){for(let j=0;j<2;j++){const card=cards[row*2
 y=section('03','成长收获',y+20);round(pad,y,W-pad*2,growthH,18,'#fcf3d6');let gy=y+24;for(const g of growth)gy=text(g,pad+28,gy,24,'#4a5b54',false,38)+12;
 return cv
 }
-return {summarize,steps,points,render};
+return {summarize,steps,points,render,prepareFonts,fontFamily:FONT_FAMILY};
 });

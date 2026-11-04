@@ -49,3 +49,30 @@ test('cleaning does not invent replacements or modify source objects',()=>{
  assert.equal(JSON.stringify(source),snapshot);assert.equal(model.title,'A课');
  assert.equal(model.growth[0],'执行 x ** 2，使用 a*b');assert.equal(model.growth[1],'校验编程结果');
 });
+
+test('Word list glyphs are removed, and unknown private symbols warn without changing source',()=>{
+ const source={name:'视觉巡线',objectives:'知识目标\n\uf0b7 理解视觉巡线\n\uf0fc 编写程序\n\uf0a7 比较 a <= b\n\uf0d8 排除 -99999',procedure:'1、安装摄像头\n固定\ue123摄像头\n2、测试\n排除\ufffc异常'};
+ const before=JSON.stringify(source),model=summarize(source);
+ assert.deepEqual(model.growth,['理解视觉巡线','编写程序','比较 a <= b']);
+ assert.equal(model.focus,'理解视觉巡线');
+ assert.doesNotMatch(JSON.stringify(model),/[\uf0b7\uf0fc\uf0a7\uf0d8\ue123\ufffc]/);
+ assert.match(model.warnings[0],/2 个/);assert.equal(JSON.stringify(source),before);
+});
+test('real question marks, checkboxes and valid symbols remain in previews',()=>{
+ const model=summarize({objectives:'1、为什么？Why?\n2、□ 测试转向 90°，保持速度 50%\n3、验证 a <= b、x ** 2 和 -99999',name:'机器人 🤖'});
+ assert.deepEqual(model.warnings,[]);assert.equal(model.growth[0],'为什么？Why?');assert.match(model.growth[1],/□/);assert.match(model.growth[2],/-99999/);assert.equal(model.title,'机器人 🤖');
+});
+test('font loading uses actual preview text and both text weights',async()=>{
+ const calls=[],model=summarize({name:'中文黑体',objectives:'1、验证 Ω 与 µ'});
+ const api=require('../course-preview');await api.prepareFonts({load:async(font,text)=>calls.push({font,text})},model);
+ assert.equal(calls.length,2);assert.match(calls[0].font,/SimHei.*Noto Sans CJK SC.*Segoe UI Symbol/);assert.match(calls[1].font,/^bold/);assert.ok(calls.every(call=>call.text.includes('Ω 与 µ')));
+});
+
+test('standalone page embeds the tested module, not a separately cached preview script',()=>{
+ const fs=require('node:fs'),path=require('node:path');
+ const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+ const source=fs.readFileSync(path.join(__dirname,'../course-preview.js'),'utf8').trimEnd();
+ const embedded=html.match(/<script id="course-preview-runtime">\n([\s\S]*?)\n<\/script>/);
+ assert.ok(embedded);assert.equal(embedded[1],source);
+ assert.doesNotMatch(html,/<script src="course-preview\.js"/);
+});

@@ -12,6 +12,8 @@ const {chromium}=require('playwright');
  const port=await new Promise((resolve,reject)=>{let output='';const t=setTimeout(()=>reject(Error('startup timeout')),5000);child.stdout.on('data',chunk=>{output+=chunk;const m=output.match(/TEST_PORT=(\d+)/);if(m){clearTimeout(t);resolve(m[1])}});child.on('exit',code=>{clearTimeout(t);reject(Error('server exited '+code))})});
  browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH||'/usr/bin/chromium',headless:true});
  const page=await browser.newPage({viewport:{width:1280,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ // A stale/missing external module must no longer affect the standalone page.
+ await page.route('**/course-preview.js',route=>route.fulfill({contentType:'application/javascript',body:'window.CoursePreview={summarize(){throw Error("stale external module")}}'}));
  await page.goto('http://127.0.0.1:'+port);await page.waitForFunction(()=>syncConnected&&window.CoursePreview);
  const response=await page.request.get('http://127.0.0.1:'+port+'/course-preview.js');assert.match(response.headers()['content-type'],/javascript/);
  await page.evaluate(()=>{const cat='explorer',index=data.explorer.findIndex(s=>/超声波传感器与小舵机/.test(s.name));openDocument(cat,Math.max(0,index));Object.defineProperty(navigator,'clipboard',{value:{write:async items=>{window.previewBlob=await items[0].getType('image/png')}},configurable:true})});
@@ -49,6 +51,27 @@ const {chromium}=require('playwright');
  assert.ok(cleaned.drawn.some(s=>s.includes('-99999')));
  if(process.env.PREVIEW_CLEAN_OUTPUT_PATH)await fs.writeFile(process.env.PREVIEW_CLEAN_OUTPUT_PATH,Buffer.from(cleaned.png,'base64'));
  console.log('PASS cleaned canvas text removes corrupt glyphs and list markers while retaining code values');
+ // Reproduce deleting a corrupted character in the visible objectives, without saving first.
+ await page.evaluate(()=>{
+ closeTrainingPreview();
+ Object.defineProperty(navigator,'clipboard',{value:{write:async()=>{}},configurable:true});
+ document.getElementById('doc-objectives').textContent='知识目标\n① 修改前目标\ufffd\ue123';
+ });
+ await page.locator('[onclick="generateImage()"]').click();await page.waitForFunction(()=>!previewImageState.busy);
+ assert.match(await page.locator('#training-preview-status').innerText(),/无法识别/);
+ const oldPreview=await page.locator('#training-preview-image').getAttribute('src');
+ await page.locator('#training-preview-dialog header button').click();
+ // Edit in place; the prior slot data still contains the old objective until generation saves it.
+ await page.locator('#doc-objectives').fill('知识目标\n① 删除乱码后的新目标');
+ const live=await page.evaluate(()=>{const before=CoursePreview.render;window.lastModel=null;CoursePreview.render=function(model,...rest){window.lastModel=model;return before(model,...rest)};return data[docContext.cat][docContext.index].objectives});
+ assert.match(live,/修改前目标/);
+ await page.locator('[onclick="generateImage()"]').click();await page.waitForFunction(()=>!previewImageState.busy);
+ const model=await page.evaluate(()=>window.lastModel);
+ assert.deepEqual(model.growth,['删除乱码后的新目标']);assert.equal(model.focus,'删除乱码后的新目标');assert.deepEqual(model.warnings,[]);
+ assert.doesNotMatch(await page.locator('#training-preview-status').innerText(),/无法识别/);
+ assert.notEqual(await page.locator('#training-preview-image').getAttribute('src'),oldPreview);
+ assert.match(await page.locator('#training-preview-status').innerText(),/本次生成/);
+ console.log('PASS embedded module ignores stale external code, and regeneration uses current edits instead of saved objectives');
  await page.evaluate(()=>{closeTrainingPreview();window.CoursePreview=undefined});
  await page.locator('[onclick="generateImage()"]').click();await page.waitForFunction(()=>!previewImageState.busy);
  assert.match(await page.locator('#training-preview-status').innerText(),/图片组件未加载/);
