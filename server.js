@@ -8,7 +8,9 @@ const HTML = path.join(DIR, 'index.html');
 // PPT 保存到 E 盘 ppt 文件夹，按模块分类
 const PPT_ROOT = 'E:/ppt';
 const DATA_FILE = path.join(DIR, 'makex_data.json');
-const { syncCourses, validCourses, atomicSave } = require('./sync-courses');
+const { validCourses, atomicSave } = require('./sync-courses');
+const { syncLocalCourses } = require('./managed-git-sync');
+const SYNC_SERVER_VERSION = '2026-11-04.sync2';
 let courseSyncBusy = false;
 let dataWriteQueue = Promise.resolve();
 
@@ -45,17 +47,22 @@ function localSyncRequest(req) {
 const sv = http.createServer(function (req, res) {
   // Git is a local desktop action. Do not expose repository operations to LAN
   // clients, arbitrary websites, or DNS-rebinding hosts.
-  if ((req.url || '').split('?')[0] === '/git-sync') {
+  if (['/git-sync', '/git-sync/status'].includes((req.url || '').split('?')[0])) {
     if (!localSyncRequest(req)) { res.writeHead(403); res.end('Local access only'); return; }
     if (req.headers.origin) res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
     res.setHeader('Vary', 'Origin');
     res.setHeader('Cache-Control', 'no-store');
     if (req.method === 'OPTIONS') {
-      res.setHeader('Access-Control-Allow-Methods', 'POST');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,X-MakeX-Sync');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,X-MakeX-Sync,X-MakeX-Confirm-Setup');
       res.writeHead(204); res.end(); return;
     }
     const reply = (status, value) => { res.writeHead(status, { 'Content-Type': 'application/json;charset=utf-8' }); res.end(JSON.stringify(value)); };
+    if ((req.url || '').split('?')[0] === '/git-sync/status') {
+      if (req.method !== 'GET') { reply(405, { error: '请使用 GET 检查本地服务。' }); return; }
+      reply(200, { ok: true, version: SYNC_SERVER_VERSION, directory: DIR,
+        repositoryPresent: fs.existsSync(path.join(DIR, '.git')), managedRepositoryPresent: fs.existsSync(path.join(DIR, '.makex-github')) }); return;
+    }
     if (req.method !== 'POST' || req.headers['x-makex-sync'] !== '1' || !/^application\/json(?:;|$)/i.test(req.headers['content-type'] || '')) {
       reply(403, { error: '请从本地 MakeX 页面点击同步按钮。' }); return;
     }
@@ -69,6 +76,7 @@ const sv = http.createServer(function (req, res) {
     req.on('end', async () => {
       processing = true;
       let localBackup;
+      let incomingSaved = false;
       try {
         if (bytes > 32 * 1024 * 1024) { reply(413, { error: '课程数据过大，请先拆分或减少图片。' }); return; }
         let courses;
@@ -83,18 +91,19 @@ const sv = http.createServer(function (req, res) {
             localBackup = '.makex-backups';
           }
           await atomicSave(DATA_FILE, courses);
+          incomingSaved = true;
         };
         let result;
-        try { result = await syncCourses({ cwd: DIR, beforeSync: saveIncoming }); }
+        try { result = await syncLocalCourses({ cwd: DIR, beforeSync: saveIncoming, confirmedRemoteCommit: req.headers['x-makex-confirm-setup'] }); }
         catch (error) {
           // ZIP users can still save lessons even before setting up Git.
-          if (error.code === 'NO_REPOSITORY' || error.code === 'NO_GIT') await saveIncoming();
+          if (!incomingSaved && (error.code === 'NO_REPOSITORY' || error.code === 'NO_GIT')) await saveIncoming();
           throw error;
         }
         reply(200, result);
       } catch (error) {
-        reply(['REMOTE_DATA_CHANGED', 'DIVERGED', 'BUSY'].includes(error.code) ? 409 : 500,
-          { error: error.code ? error.message : '同步未完成，课程仍保留在本地。', code: error.code || 'SAVE_FAILED', backup: error.backup || localBackup });
+        reply(['REMOTE_DATA_CHANGED', 'DIVERGED', 'BUSY', 'SYNC_SETUP_REQUIRED', 'SYNC_CACHE_CONFLICT'].includes(error.code) ? 409 : 500,
+          { error: error.code ? error.message : '同步未完成，课程仍保留在本地。', code: error.code || 'SAVE_FAILED', backup: error.backup || localBackup, setup: error.setup });
       } finally { release(); }
     });
     return;
@@ -198,6 +207,11 @@ const sv = http.createServer(function (req, res) {
   } catch (e) { res.writeHead(404); res.end('Not found'); }
 });
 
+sv.on('error', function(error) {
+  if (error.code === 'EADDRINUSE') console.error('端口 '+PORT+' 已被旧服务占用。请先关闭旧的 MakeX 服务器窗口，再从新版目录启动。');
+  else console.error('MakeX 服务启动失败：'+error.message);
+  process.exitCode = 1;
+});
 sv.listen(PORT, '0.0.0.0', function () {
   try { fs.mkdirSync(PPT_ROOT, { recursive: true }); } catch (e) {}
   console.log('MakeX server OK on http://localhost:' + PORT);

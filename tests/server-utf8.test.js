@@ -11,6 +11,7 @@ test('large image saves preserve Chinese captions across UTF-8 chunk boundaries'
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'makex-utf8-'));
   await fs.copyFile(path.join(__dirname, '../server.js'), path.join(dir, 'server.js'));
   await fs.copyFile(path.join(__dirname, '../sync-courses.js'), path.join(dir, 'sync-courses.js'));
+  await fs.copyFile(path.join(__dirname, '../managed-git-sync.js'), path.join(dir, 'managed-git-sync.js'));
   const reservation = net.createServer();
   reservation.listen(0, '127.0.0.1'); await once(reservation, 'listening');
   const port = reservation.address().port;

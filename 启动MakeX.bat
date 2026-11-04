@@ -13,7 +13,14 @@ if errorlevel 1 (
     )
 )
 if defined PORT (set "MAKEX_PORT=%PORT%") else (set "MAKEX_PORT=3456")
-start "MakeX Server" /min "%MAKEX_NODE%" "%~dp0server.js"
+"%MAKEX_NODE%" "%~dp0check-local-server.js"
+if errorlevel 2 (
+    pause
+    exit /b 1
+)
+if errorlevel 1 (
+    start "MakeX Server" "%MAKEX_NODE%" "%~dp0server.js"
+)
 timeout /t 2 /nobreak >nul
 start "" "http://localhost:%MAKEX_PORT%"
 exit /b 0

@@ -12,6 +12,15 @@ if errorlevel 1 (
         exit /b 1
     )
 )
+"%MAKEX_NODE%" "%~dp0check-local-server.js"
+if errorlevel 2 (
+    pause
+    exit /b 1
+)
+if not errorlevel 1 (
+    pause
+    exit /b 0
+)
 echo MakeX 本地服务器：按 Ctrl+C 停止。
 "%MAKEX_NODE%" "%~dp0server.js"
 if errorlevel 1 pause

@@ -20,7 +20,7 @@ async function request(port, { body, headers = {}, method = 'POST' } = {}) {
 test('local-only Git HTTP endpoint saves, backs up and uploads actual course payloads', async t => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'makex-git-http-'));
   const app = path.join(dir, 'app'); const remote = path.join(dir, 'remote.git'); await fs.mkdir(app);
-  for (const name of ['server.js', 'sync-courses.js']) await fs.copyFile(path.join(__dirname, '..', name), path.join(app, name));
+  for (const name of ['server.js', 'sync-courses.js', 'managed-git-sync.js']) await fs.copyFile(path.join(__dirname, '..', name), path.join(app, name));
   const original = { inspire: [], explorer: [{ name: '原课程' }], explorer2: [], challenge: [] };
   await fs.writeFile(path.join(app, 'makex_data.json'), JSON.stringify(original));
   await git(dir, 'init', '--bare', '--initial-branch=main', remote); await git(app, 'init', '--initial-branch=main');
@@ -32,6 +32,12 @@ test('local-only Git HTTP endpoint saves, backs up and uploads actual course pay
   const child = spawn(process.execPath, ['server.js'], { cwd: app, env: { ...process.env, PORT: String(port) }, stdio: ['ignore', 'pipe', 'pipe'] });
   t.after(async () => { if (child.exitCode === null) { child.kill(); await once(child, 'exit'); } await fs.rm(dir, { recursive: true, force: true }); });
   await new Promise((resolve, reject) => { const timeout = setTimeout(() => reject(Error('startup timeout')), 5000); child.stdout.once('data', () => { clearTimeout(timeout); resolve(); }); child.once('exit', code => { clearTimeout(timeout); reject(Error('server exit: ' + code)); }); });
+  await t.test('local status identifies the running version and never exposes it to foreign origins', async () => {
+    const response = await fetch('http://127.0.0.1:' + port + '/git-sync/status');
+    const status = await response.json();
+    assert.equal(status.version, '2026-11-04.sync2'); assert.equal(status.directory, app); assert.equal(status.repositoryPresent, true);
+    assert.equal((await fetch('http://127.0.0.1:' + port + '/git-sync/status', { headers: { Origin: 'https://evil.example' } })).status, 403);
+  });
   await t.test('rejects foreign websites, missing action header and rebinding hosts', async () => {
     const before = await git(remote, 'rev-parse', 'main');
     for (const headers of [{ Origin: 'https://evil.example' }, { Host: 'evil.example:' + port }, { 'X-MakeX-Sync': '' }]) {

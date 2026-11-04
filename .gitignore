@@ -3,3 +3,7 @@ node_modules/
 *.log
 
 .makex-backups/
+
+.makex-github/
+.makex-github-setup-*/
+.makex-github.lock

@@ -6,7 +6,7 @@ const {chromium}=require('playwright');
  const root=path.join(__dirname,'..'),dir=await fs.mkdtemp(path.join(os.tmpdir(),'makex-preview-'));
  let child,browser;
  try{
- for(const file of ['server.js','sync-courses.js','index.html','course-preview.js','school-knowledge.js','course-images.js','git-sync-client.js','makex_data.json'])await fs.copyFile(path.join(root,file),path.join(dir,file));
+ for(const file of ['server.js','sync-courses.js','managed-git-sync.js','index.html','course-preview.js','school-knowledge.js','course-images.js','git-sync-client.js','makex_data.json'])await fs.copyFile(path.join(root,file),path.join(dir,file));
  await fs.writeFile(path.join(dir,'start.js'),"const http=require('http');const original=http.Server.prototype.listen;http.Server.prototype.listen=function(...args){this.once('listening',()=>console.log('TEST_PORT='+this.address().port));return original.apply(this,args)};require('./server');");
  child=spawn(process.execPath,['start.js'],{cwd:dir,env:{...process.env,PORT:'0'},stdio:['ignore','pipe','pipe']});
  const port=await new Promise((resolve,reject)=>{let output='';const t=setTimeout(()=>reject(Error('startup timeout')),5000);child.stdout.on('data',chunk=>{output+=chunk;const m=output.match(/TEST_PORT=(\d+)/);if(m){clearTimeout(t);resolve(m[1])}});child.on('exit',code=>{clearTimeout(t);reject(Error('server exited '+code))})});

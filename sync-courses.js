@@ -10,6 +10,38 @@ const DATA = 'makex_data.json';
 class SyncError extends Error {
   constructor(code, message) { super(message); this.code = code; }
 }
+function createGitEnv() {
+  const env = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
+  // Credential Manager may open the normal GitHub browser login after an explicit sync action.
+  if (!env.GCM_INTERACTIVE) env.GCM_INTERACTIVE = 'auto';
+  return env;
+}
+function classifyGitError(error, stage) {
+  const details = String(error.stderr || '') + '\n' + String(error.message || '');
+  let code = 'GIT_FAILED', message = 'Git 操作未完成；课程仍保留在本地。';
+  if (error.code === 'ENOENT') { code = 'NO_GIT'; message = '未找到 Git。请先安装 Git for Windows，或安装 GitHub Desktop 后重新启动本地服务。'; }
+  else if (/protected branch|GH006|GH013|repository rule|pre-receive hook declined.*protected/i.test(details)) { code = 'GITHUB_PUSH_REJECTED'; message = 'GitHub 拒绝直接更新 main 分支。请检查仓库分支保护规则；本地提交和课程备份已保留。'; }
+  else if (/403|write access.*not granted|permission to .* denied|access denied|repository not found/i.test(details)) { code = 'GITHUB_ACCESS_DENIED'; message = '当前 GitHub 账号无法访问或写入这个仓库。请在 GitHub Desktop 中登录有权限的账号并尝试 Fetch／Push，再回到页面重试。'; }
+  else if (/authentication failed|could not read (?:username|password)|terminal prompts disabled|permission denied \(publickey\)|support for password authentication|401|credential.*(?:missing|failed)/i.test(details)) { code = 'GITHUB_AUTH_REQUIRED'; message = 'GitHub 登录尚未完成。请完成弹出的浏览器登录，或先在 GitHub Desktop 中登录并 Fetch／Push 此仓库，然后重试。不要在网页或聊天里填写令牌。'; }
+  else if (/could not resolve|failed to connect|connection.*(?:timed out|reset|refused)|unable to access|SSL certificate|schannel|certificate verify|network is unreachable|ETIMEDOUT|ENOTFOUND/i.test(details) || error.killed) { code = 'GIT_NETWORK_FAILED'; message = '连接 GitHub 失败或超时。请检查电脑网络、系统代理及 GitHub 是否可访问，再重试；课程和已有本地提交仍保留。'; }
+  const result = new SyncError(code, message); result.stage = stage; return result;
+}
+async function findGitExecutable() {
+  const candidates = ['git'];
+  if (process.platform === 'win32') {
+    for (const base of [process.env.ProgramFiles, process.env['ProgramFiles(x86)']]) if (base) candidates.push(path.join(base, 'Git', 'cmd', 'git.exe'));
+    if (process.env.LOCALAPPDATA) {
+      candidates.push(path.join(process.env.LOCALAPPDATA, 'Programs', 'Git', 'cmd', 'git.exe'));
+      const desktop = path.join(process.env.LOCALAPPDATA, 'GitHubDesktop');
+      const versions = await fs.readdir(desktop).catch(() => []);
+      for (const version of versions.filter(name => /^app-/.test(name)).sort().reverse()) candidates.push(path.join(desktop, version, 'resources', 'app', 'git', 'cmd', 'git.exe'));
+    }
+  }
+  for (const command of candidates) {
+    try { await execute(command, ['--version'], { env: createGitEnv(), windowsHide: true, timeout: 10000 }); return command; } catch {}
+  }
+  throw new SyncError('NO_GIT', '未找到 Git。请先安装 Git for Windows，或安装 GitHub Desktop 后重新启动本地服务。');
+}
 function validCourses(data) {
   return data && typeof data === 'object' && !Array.isArray(data) &&
     ['inspire', 'explorer', 'explorer2', 'challenge'].every(key => Array.isArray(data[key]) &&
@@ -27,16 +59,16 @@ async function atomicSave(file, data) {
   finally { await fs.rm(temporary, { force: true }).catch(() => {}); }
 }
 async function syncCourses({ cwd = __dirname, beforeSync } = {}) {
-  const env = { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' };
+  const env = createGitEnv();
+  const gitExecutable = await findGitExecutable();
   // Existing credentials/managers are reused. Never embed a token or change Git identity.
   async function git(args, codes = [0]) {
     try {
-      const r = await execute('git', args, { cwd, env, timeout: 90000, maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+      const r = await execute(gitExecutable, args, { cwd, env, timeout: 90000, maxBuffer: 64 * 1024 * 1024, windowsHide: true });
       return { code: 0, stdout: r.stdout.trim() };
     } catch (error) {
       if (codes.includes(error.code)) return { code: error.code, stdout: String(error.stdout || '').trim() };
-      const fail = new SyncError('GIT_FAILED', 'Git 操作失败，请检查本地 Git、GitHub 登录和网络；课程文件仍保留在本地。');
-      fail.stage = args[0]; throw fail;
+      throw classifyGitError(error, args[0]);
     }
   }
   try { await git(['--version']); }
@@ -76,7 +108,7 @@ async function syncCourses({ cwd = __dirname, beforeSync } = {}) {
     try {
       await git(['fetch', '--no-tags', 'origin', 'refs/heads/main']);
       remote = (await git(['rev-parse', 'FETCH_HEAD'])).stdout;
-    } catch { throw new SyncError('FETCH_FAILED', '无法读取 GitHub 的 main 分支。请检查网络和 GitHub 登录；本地课程已保存并备份，未上传。'); }
+    } catch (error) { if (error.code && error.code !== 'GIT_FAILED') throw error; throw new SyncError('FETCH_FAILED', '无法读取 GitHub 的 main 分支。请检查网络和 GitHub 登录；本地课程已保存并备份，未上传。'); }
     if (remote !== head && (await git(['merge-base', '--is-ancestor', remote, head], [0, 1])).code === 0) {
       const pendingFiles = (await git(['log', '--format=', '--name-only', remote + '..' + head])).stdout.split('\n').filter(Boolean);
       if (pendingFiles.some(file => file !== DATA)) throw new SyncError('PENDING_CODE_COMMITS', '本地还有未上传的程序提交，请先处理这些提交，再使用课程同步。');
@@ -119,7 +151,7 @@ async function syncCourses({ cwd = __dirname, beforeSync } = {}) {
     const commit = (await git(['rev-parse', 'HEAD'])).stdout;
     if (commit !== remote) {
       try { await git(['push', '--porcelain', 'origin', 'HEAD:refs/heads/main']); }
-      catch { throw new SyncError('PUSH_FAILED', '上传未成功，本地提交已保留。请检查 GitHub 登录、网络或远端新提交后重试；不会强制覆盖远端。'); }
+      catch (error) { if (error.code && error.code !== 'GIT_FAILED') throw error; throw new SyncError('PUSH_FAILED', '上传未成功，本地提交已保留。请检查 GitHub 登录、网络或远端新提交后重试；不会强制覆盖远端。'); }
     }
     return { ok: true, commit, changed, updatedCode, upToDate: commit === remote,
       repository: REPOSITORY, branch: 'main' };
@@ -128,11 +160,11 @@ async function syncCourses({ cwd = __dirname, beforeSync } = {}) {
     throw error;
   } finally { await lock.close(); await fs.rm(path.join(gitDir, 'makex-course-sync.lock'), { force: true }); }
 }
-module.exports = { syncCourses, validCourses, correctRemote, atomicSave, SyncError };
+module.exports = { findGitExecutable, createGitEnv, classifyGitError, syncCourses, validCourses, correctRemote, atomicSave, SyncError };
 if (require.main === module) {
-  syncCourses().then(result => {
+  require('./managed-git-sync').syncLocalCourses({ cwd: __dirname }).then(result => {
     console.log(result.upToDate ? '课程已经与 GitHub 一致。' : '课程已上传到 GitHub。');
     console.log('https://github.com/' + REPOSITORY + '/tree/main');
     console.log('Commit: ' + result.commit.slice(0, 7));
-  }).catch(error => { console.error(error.message); if (error.backup) console.error('备份目录：' + error.backup); process.exitCode = 1; });
+  }).catch(error => { console.error(error.message); if (error.code === 'SYNC_SETUP_REQUIRED') console.error('请运行启动MakeX.bat，在页面点击同步 GitHub，核对本机和远端课程后确认。'); if (error.backup) console.error('备份目录：' + error.backup); process.exitCode = 1; });
 }
