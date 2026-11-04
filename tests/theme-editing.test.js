@@ -21,7 +21,7 @@ function themeFixture() {
   vm.runInContext(themeSource, context);
   const events = {};
   const editor = {
-    textContent: '主题一', parentElement: { draggable: true },
+    textContent: '主题一', parentElement: { draggable: true, dataset: {}, querySelector() { return null; } },
     addEventListener(name, callback) { events[name] = callback; },
     emit(name, event = {}) { events[name]?.call(this, event); },
     blur() { calls.blur++; this.emit('blur'); }
@@ -47,7 +47,7 @@ test('Chinese theme composition stays editable until an explicit Enter or blur',
   assert.equal(prevented, true);
   assert.equal(editor.parentElement.draggable, true);
   assert.deepEqual(courses.map(course => course.theme), ['新主题', '主题二', '新主题']);
-  assert.deepEqual(calls, { saves: 1, renders: 1, blur: 1 });
+  assert.deepEqual(calls, { saves: 1, renders: 0, blur: 1 });
 });
 
 test('leaving an unchanged theme does not redraw the category', () => {
@@ -114,7 +114,7 @@ function pollingFixture() {
   };
 }
 
-for (const field of ['th-text', 'slot-input']) {
+for (const field of ['th-text', 'slot-input', 'th-color-picker', 'th-color-reset']) {
   test(`polling does not replace a focused ${field}, including an already pending response`, async () => {
     const fixture = pollingFixture();
     fixture.edit(field);
