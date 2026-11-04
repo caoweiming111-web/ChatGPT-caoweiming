@@ -55,6 +55,10 @@ const {chromium}=require('playwright');
  await page.evaluate(()=>{
  closeTrainingPreview();
  Object.defineProperty(navigator,'clipboard',{value:{write:async()=>{}},configurable:true});
+ // Keep unrelated fields clean for this editing regression; uploaded lessons may legitimately contain old corrupt text.
+ document.getElementById('doc-name').value='重生成测试课程';
+ document.getElementById('doc-subtitle').value='验证当前编辑内容';
+ document.getElementById('doc-procedure').textContent='1、执行测试流程';
  document.getElementById('doc-objectives').textContent='知识目标\n① 修改前目标\ufffd\ue123';
  });
  await page.locator('[onclick="generateImage()"]').click();await page.waitForFunction(()=>!previewImageState.busy);
