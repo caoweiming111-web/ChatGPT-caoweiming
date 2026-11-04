@@ -1,11 +1,25 @@
 /* Training preview: extract course text locally; no external model or invented outcomes. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.CoursePreview=api})(typeof globalThis!=='undefined'?globalThis:this,function(){
 'use strict';
-function clean(value){return String(value||'').replace(/\r\n?/g,'\n').replace(/\u00a0/g,' ').trim()}
+// Clean only the generated copy. Never rewrite the teacher's course data or guess lost characters.
+function clean(value){
+return Array.from(String(value||'')).filter(ch=>!(ch.length===1&&/[\ud800-\udfff]/.test(ch))).join('')
+.replace(/\r\n?/g,'\n').replace(/[\u2028\u2029]/g,'\n').replace(/\u00a0/g,' ')
+.replace(/[\ufffd\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/g,'')
+.replace(/^[ \t]*\*+\s+/gm,'').replace(/\*\*(\S(?:[^*]*?\S)?)\*\*(?=$|[\s，。；、:：!?！？）)])/g,'$1').replace(/`([^`\n]+)`/g,'$1').trim()
+}
 function lines(value){return clean(value).split('\n').map(s=>s.trim()).filter(Boolean)}
-function strip(s){return s.replace(/^(?:\*+|[·•●]|(?:第?[一二三四五六七八九十]+|\d{1,2})[、.．)）])\s*/,'').trim()}
-function short(s,n){s=clean(s).replace(/\s+/g,' ');return s.length>n?s.slice(0,n-1)+'…':s}
-function points(text){const all=lines(text).filter(s=>! /^(课程目标|教学目标|学习目标|课程基本流程|教学流程|课堂流程)[：:]?$/.test(s));const numbered=all.filter(s=>/^(?:[一二三四五六七八九十]+[、.．)）]|\d{1,2}(?:[、)）]|[.．](?!\d)))/.test(s));return (numbered.length?numbered:all.filter(s=>!/^\*\*/.test(s))).map(strip).filter(Boolean)}
+const listPrefix=/^(?:(?:第?[一二三四五六七八九十]+|\d{1,2})(?:[、)）]|[.．](?!\d))|[（(](?:\d{1,2}|[一二三四五六七八九十]+)[)）]|[①-⑳])\s*/;
+function numbered(s){return listPrefix.test(s)}
+function strip(s){return clean(s).replace(/^#{1,6}\s+/,'').replace(/^(?:\*+|[·•●▪■◆◇▶►])\s*/,'').replace(/^[-+]\s+(?!\d)/,'').replace(listPrefix,'').trim()}
+function short(s,n){const chars=Array.from(clean(s).replace(/\s+/g,' '));return chars.length>n?chars.slice(0,n-1).join('')+'…':chars.join('')}
+function goalHeading(s){return /^(?:(?:课程|教学|学习|训练|知识|技能|能力|情感|态度|素养|实践|实操|认知|创新|拓展|成长|课堂|基本)[\s／/与及、和]*){0,4}(?:目标|流程|收获|步骤|要求)[：:]?$/.test(strip(s))}
+function points(text){
+const all=lines(text).filter(s=>!goalHeading(s)&&strip(s));
+const primary=all.filter(numbered);
+const result=(primary.length?primary:all).map(strip);
+return Array.from(new Set(result)).filter(Boolean)
+}
 function cardTitle(s){return strip(s).replace(/^完成/,'').replace(/^在机器人上/,'').replace(/^通过程序来/,'').trim()}
 function excerpt(s,limit){
 s=clean(s).replace(/^[^：:]{1,8}[：:]\s*/,'');
@@ -22,7 +36,7 @@ function steps(text){
 const all=lines(text).filter(s=>! /^(课程基本流程|教学流程|课堂流程)[：:]?$/.test(s));
 const chinese=all.some(s=>/^[一二三四五六七八九十]+[、.．]/.test(s));
 const groups=[];let last=0;let nested=false;
-for(const s of all){const m=s.match(/^(\d{1,2})(?:[、)）]|[.．](?!\d))/);let heading=chinese?/^[一二三四五六七八九十]+[、.．]/.test(s):!!m;
+for(const s of all){const m=s.match(/^(\d{1,2})(?:[、)）]|[.．](?!\d))/);let heading=chinese?/^[一二三四五六七八九十]+[、.．]/.test(s):numbered(s);
 if(!chinese&&m){const num=Number(m[1]);if(num<=last)nested=true;if(nested)heading=false;else last=num}
 if(heading||!groups.length)groups.push({title:strip(s),body:[]});else groups[groups.length-1].body.push(strip(s));
 }

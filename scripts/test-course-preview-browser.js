@@ -38,6 +38,17 @@ const {chromium}=require('playwright');
  assert.equal(await page.locator('#training-preview-dialog').evaluate(el=>el.open),true);
  assert.equal(await page.locator('#training-preview-image').isVisible(),true);
  const manualDownload=page.waitForEvent('download');await page.locator('#training-preview-download').click();assert.match((await manualDownload).suggestedFilename(),/\.png$/);
+ const cleaned=await page.evaluate(()=>{
+ const model=CoursePreview.summarize({name:'AI Camera 视觉巡线',subtitle:'基于 AI Camera 的路径识别与闭环调试',objectives:'知识目标\n① 理解 AI 视觉巡线的原理，能够说出摄像头采集图像、计算偏移、调整纠偏的完整\ufffd\ufffd流程\n② 能够区分视觉巡线和红外单\ufffd\ufffd巡线的差异，了解常见干扰因素\n技能目标\n③ 能够编写 P 巡线程序，排除 -99999 的异常值',procedure:'① 讲解视觉如何完成巡线\nAI Camera 摄像头采集画面，识别黑线和底色的差异\n② 搭建小车并安装 AI Camera\n固定摄像头，保持垂直朝下\n③ 编写巡线程序\n使用 P 巡线，排除 -99999\n④ 测试与调试\n降低基础速度，观察光线干扰'});
+ const drawn=[];
+ const canvas=CoursePreview.render(model,{code:'Explorer 第一年 · 36',date:'2026/11/04'},()=>{const c=document.createElement('canvas');const ctx=c.getContext('2d');const original=ctx.fillText.bind(ctx);ctx.fillText=function(text,...rest){drawn.push(text);return original(text,...rest)};return c});
+ return {model,drawn,png:canvas.toDataURL('image/png').split(',')[1]}
+ });
+ assert.doesNotMatch(cleaned.drawn.join(''),/[\ufffd\u200b①②③④]/);
+ assert.ok(cleaned.model.growth.every(s=>s!=='知识目标'&&s!=='技能目标'));
+ assert.ok(cleaned.drawn.some(s=>s.includes('-99999')));
+ if(process.env.PREVIEW_CLEAN_OUTPUT_PATH)await fs.writeFile(process.env.PREVIEW_CLEAN_OUTPUT_PATH,Buffer.from(cleaned.png,'base64'));
+ console.log('PASS cleaned canvas text removes corrupt glyphs and list markers while retaining code values');
  await page.evaluate(()=>{closeTrainingPreview();window.CoursePreview=undefined});
  await page.locator('[onclick="generateImage()"]').click();await page.waitForFunction(()=>!previewImageState.busy);
  assert.match(await page.locator('#training-preview-status').innerText(),/图片组件未加载/);
