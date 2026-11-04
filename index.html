@@ -123,6 +123,13 @@
   .rich-toolbar input[type="number"]{width:56px;padding:2px 4px}
   .rich-toolbar input[type="color"]{width:34px;padding:2px;cursor:pointer}
   .rich-format-hint{font-size:11px;color:var(--text-dim);margin-left:6px}
+  .preview-dialog{margin:auto;width:min(900px,94vw);max-height:92vh;padding:22px;border:1px solid var(--border);border-radius:14px;background:var(--bg2);color:var(--text);overflow:auto}
+  .preview-dialog::backdrop{background:rgba(0,0,0,.72)}
+  .preview-dialog header,.preview-dialog footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .preview-dialog p{margin:16px 0;padding:10px 0;line-height:1.7;position:sticky;top:0;background:var(--bg2);z-index:1}
+  .preview-dialog img{display:block;width:100%;height:auto;border-radius:8px;margin:16px 0}
+  .preview-dialog img[hidden]{display:none}
+  .toast-container{position:fixed;bottom:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:8px;max-width:min(420px,90vw);pointer-events:none}
   .doc-editor:empty::before{content:attr(data-placeholder);color:rgba(255,255,255,0.20);pointer-events:none}
     .img-toolbar{display:none;position:fixed;z-index:999;padding:4px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;gap:2px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,0.5);pointer-events:auto;white-space:nowrap}
   .img-toolbar button{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:11px;font-family:var(--mono);transition:all 0.15s;letter-spacing:0.5px}
@@ -849,19 +856,51 @@ y+=richLineHeight(line)
 }
 drawCtx.textBaseline="alphabetic";return y
 }
+var previewImageState={busy:false,blob:null,url:null,filename:''};
+function previewStatus(text){document.getElementById('training-preview-status').textContent=text}
+function closeTrainingPreview(){var dialog=document.getElementById('training-preview-dialog');if(dialog.close)dialog.close();else dialog.removeAttribute('open')}
+function previewDeadline(promise,ms){return new Promise(function(resolve,reject){var timer=setTimeout(function(){reject(Error('操作超时'))},ms);Promise.resolve(promise).then(function(value){clearTimeout(timer);resolve(value)},function(error){clearTimeout(timer);reject(error)})})}
+function downloadTrainingPreview(){
+if(!previewImageState.url)return;
+var a=document.createElement('a');a.href=previewImageState.url;a.download=previewImageState.filename;document.body.appendChild(a);a.click();a.remove();previewStatus('已开始下载图片。也可以右键图片另存为，或长按图片保存。')
+}
+async function copyTrainingPreview(){
+if(!previewImageState.blob)return false;
+try{
+if(!navigator.clipboard||typeof ClipboardItem==='undefined')throw Error('clipboard unavailable');
+await previewDeadline(navigator.clipboard.write([new ClipboardItem({'image/png':previewImageState.blob})]),2000);
+previewStatus('图片已生成并复制，可以粘贴使用，也可以点击下方按钮下载。');return true
+}catch(error){previewStatus('图片已生成，浏览器未允许复制。请点击“下载 PNG 图片”，或右键／长按图片保存。');return false}
+}
 async function generateImage(){
 if(!docContext){alert(tr('openDocFirst'));return}
-saveDocumentData();
-await document.fonts.ready;
-var slot=data[docContext.cat][docContext.index];
-var model=CoursePreview.summarize({name:slot.name,subtitle:slot.subtitle,objectives:editorText('doc-objectives'),procedure:editorText('doc-procedure')});
+if(previewImageState.busy)return;
+previewImageState.busy=true;
+var dialog=document.getElementById('training-preview-dialog');
+var image=document.getElementById('training-preview-image');
+var buttons=[document.getElementById('training-preview-copy'),document.getElementById('training-preview-download')];
+if(previewImageState.url)URL.revokeObjectURL(previewImageState.url);
+previewImageState.url=null;previewImageState.blob=null;image.hidden=true;image.removeAttribute('src');buttons.forEach(function(b){b.disabled=true});
+if(!dialog.open){if(dialog.showModal)dialog.showModal();else dialog.setAttribute('open','')}
+dialog.scrollTop=0;previewStatus('正在提取课程重点并生成图片…');
+try{
+if(!window.CoursePreview||typeof CoursePreview.render!=='function')throw Error('PREVIEW_MODULE_MISSING');
+// Snapshot before awaiting fonts so navigation cannot select a different lesson.
+var context={cat:docContext.cat,index:docContext.index};
+var model=CoursePreview.summarize({name:document.getElementById('doc-name').value,subtitle:document.getElementById('doc-subtitle').value,objectives:editorText('doc-objectives'),procedure:editorText('doc-procedure')});
+var saved=true;try{saveDocumentData()}catch(error){saved=false}
+if(document.fonts&&document.fonts.ready){try{await previewDeadline(document.fonts.ready,1000)}catch(error){/* Use available system fonts if optional fonts are still loading. */}}
 var date=new Date().toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'});
-var canvas=CoursePreview.render(model,{code:catLabel(docContext.cat)+' · '+pad(docContext.index+1),date:date},function(){return document.createElement('canvas')});
-var filename='makex_preview_'+docContext.cat+'_'+pad(docContext.index+1)+'.png';
-var blob=await new Promise(function(resolve){canvas.toBlob(resolve,'image/png')});
-if(!blob){showToast('图片生成失败，请重试');return}
-try{if(!navigator.clipboard||typeof ClipboardItem==='undefined')throw Error();await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);showToast(tr('imageCopied'))}
-catch(error){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000);showToast(tr('imageDownloaded'))}
+var canvas=CoursePreview.render(model,{code:catLabel(context.cat)+' · '+pad(context.index+1),date:date},function(){return document.createElement('canvas')});
+var blob=await previewDeadline(new Promise(function(resolve){canvas.toBlob(resolve,'image/png')}),10000);
+if(!blob)throw Error('EMPTY_IMAGE');
+previewImageState.blob=blob;previewImageState.filename='makex_preview_'+context.cat+'_'+pad(context.index+1)+'.png';previewImageState.url=URL.createObjectURL(blob);
+image.src=previewImageState.url;image.hidden=false;buttons.forEach(function(b){b.disabled=false});previewStatus('图片已生成，可查看下方预览，复制或下载。');
+if(!await copyTrainingPreview())downloadTrainingPreview();
+if(!saved)previewStatus('图片已生成，但课程数据保存失败。请先下载图片并备份课程数据。')
+}catch(error){
+previewStatus(error.message==='PREVIEW_MODULE_MISSING'?(location.protocol==='file:'?'图片组件未加载。请把新版 ZIP 完整解压到一个文件夹，确认 index.html 旁有 course-preview.js，再打开 index.html；不要在压缩包内直接打开。':'图片组件未加载。请先保存课程，关闭旧的 MakeX 服务器，再从完整解压的新版目录启动，并按 Ctrl+F5 刷新页面。'):'图片未能生成。请重试；若仍失败，请把这条提示反馈给我。原因：'+(error.message||'未知错误'));
+}finally{previewImageState.busy=false}
 }
 async function generateFullDocumentImage(){
 if(!docContext){alert(tr('openDocFirst'));return}
@@ -1253,6 +1292,12 @@ function removePpt(i){if(!docContext)return;var slot=data[docContext.cat][docCon
 <div class="save-indicator" id="save-indicator"><span class="dot"></span><span data-i18n="autoSave">自动保存</span></div>
 <div class="shortcut-hint" id="shortcut-hint" data-i18n="shortcutHint">Ctrl+S 保存 · Ctrl+P 打印 · Ctrl+F 搜索</div>
 <div class="toast-container" id="toast-container"></div>
+<dialog id="training-preview-dialog" class="preview-dialog" aria-labelledby="training-preview-title">
+  <header><h2 id="training-preview-title">训练预告图片</h2><button type="button" class="btn-secondary" onclick="closeTrainingPreview()">关闭</button></header>
+  <p id="training-preview-status" role="status" aria-live="polite"></p>
+  <img id="training-preview-image" alt="当前课程的训练预告图片" hidden>
+  <footer><button id="training-preview-copy" type="button" class="btn-secondary" onclick="copyTrainingPreview()" disabled>复制图片</button><button id="training-preview-download" type="button" class="btn-primary" onclick="downloadTrainingPreview()" disabled>下载 PNG 图片</button></footer>
+</dialog>
 <script src="course-preview.js"></script>
 <script src="school-knowledge.js"></script>
 <script src="course-images.js"></script>

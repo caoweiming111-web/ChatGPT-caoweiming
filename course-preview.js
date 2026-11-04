@@ -48,10 +48,13 @@ const growth=model.growth.map(s=>wrap(s,24,W-pad*2-56,false));
 const growthH=40+growth.reduce((h,g)=>h+g.length*38+12,0);
 const H=Math.ceil(headerH+44+52+introH+40+52+rows.reduce((a,b)=>a+b+gap,0)+20+52+growthH+48);
 cv.height=H;ctx=cv.getContext('2d');ctx.textBaseline='top';
-function round(x,y,w,h,r,color){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fillStyle=color;ctx.fill()}
+function roundedPath(x,y,w,h,r){
+ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath()
+}
+function round(x,y,w,h,r,color){roundedPath(x,y,w,h,r);ctx.fillStyle=color;ctx.fill()}
 function text(ls,x,y,size,color,bold,lineH){ctx.font=(bold?'bold ':'')+size+'px '+font;ctx.fillStyle=color;for(const line of ls){ctx.fillText(line,x,y);y+=lineH}return y}
 ctx.fillStyle='#e4eaea';ctx.fillRect(0,0,W,H);round(8,8,W-16,H-16,32,'#fffef5');
-ctx.save();ctx.beginPath();ctx.roundRect(8,8,W-16,H-16,32);ctx.clip();ctx.fillStyle='#194e51';ctx.fillRect(8,8,W-16,headerH);ctx.restore();
+ctx.save();roundedPath(8,8,W-16,H-16,32);ctx.clip();ctx.fillStyle='#194e51';ctx.fillRect(8,8,W-16,headerH);ctx.restore();
 let y=text(title,pad,48,44,'#ffffff',true,57);text(sub,pad,y+12,25,'#c9e1df',false,38);
 ctx.textAlign='right';text(['训练预告'],W-pad,52,25,'#d8c474',false,36);text([meta.code],W-pad,97,19,'#d0e2df',false,29);text(['生成于 '+meta.date],W-pad,128,18,'#d0e2df',false,28);ctx.textAlign='left';
 function section(n,label,y){text([n],pad,y+3,24,'#53777a',true,32);ctx.fillStyle='#c4af60';ctx.fillRect(pad,y+35,28,2);text([label],pad+48,y,30,'#193e43',true,42);return y+54}

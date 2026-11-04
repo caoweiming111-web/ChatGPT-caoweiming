@@ -33,7 +33,39 @@ const {chromium}=require('playwright');
  const out=process.env.PREVIEW_OUTPUT_PATH||path.join(os.tmpdir(),'makex-training-preview.png');await fs.writeFile(out,Buffer.from(preview));
  // Exercise download fallback even when clipboard permission is denied.
  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{value:{write:async()=>{throw Error('denied')}},configurable:true}));
+ await page.locator('#training-preview-dialog header button').click();
  const download=page.waitForEvent('download');await page.locator('[onclick="generateImage()"]').click();assert.match((await download).suggestedFilename(),/^makex_preview_.*\.png$/);
- assert.deepEqual(errors,[]);console.log('PASS actual preview button, clipboard PNG, download fallback, served asset and '+all.length+' course layouts; '+out);
+ assert.equal(await page.locator('#training-preview-dialog').evaluate(el=>el.open),true);
+ assert.equal(await page.locator('#training-preview-image').isVisible(),true);
+ const manualDownload=page.waitForEvent('download');await page.locator('#training-preview-download').click();assert.match((await manualDownload).suggestedFilename(),/\.png$/);
+ await page.evaluate(()=>{closeTrainingPreview();window.CoursePreview=undefined});
+ await page.locator('[onclick="generateImage()"]').click();await page.waitForFunction(()=>!previewImageState.busy);
+ assert.match(await page.locator('#training-preview-status').innerText(),/图片组件未加载/);
+ assert.equal(await page.locator('#training-preview-download').isDisabled(),true);
+ // Standalone HTML execution without a server. Managed browser policy blocks file:// navigation;
+ // read the permitted local source and execute it as content instead. This does not validate file:// navigation itself.
+ const offline=await browser.newPage();
+ // Opaque about:blank origins have no localStorage; supply an in-memory browser store.
+ await offline.evaluate(()=>{const values=new Map();Object.defineProperty(window,'localStorage',{value:{getItem:key=>values.has(key)?values.get(key):null,setItem:(key,value)=>values.set(key,String(value)),removeItem:key=>values.delete(key)}})});
+ const standalone=(await fs.readFile(path.join(dir,'index.html'),'utf8')).replace(/<script src="[^"]+"><\/script>/g,'');
+ await offline.setContent(standalone);
+ for(const file of ['course-preview.js','school-knowledge.js','course-images.js','git-sync-client.js'])await offline.addScriptTag({content:await fs.readFile(path.join(dir,file),'utf8')});
+ await offline.evaluate(()=>{openDocument('explorer',0);Object.defineProperty(navigator,'clipboard',{value:{write:async()=>new Promise(()=>{})},configurable:true});CanvasRenderingContext2D.prototype.roundRect=undefined});
+ const offlineDownload=offline.waitForEvent('download');await offline.locator('[onclick="generateImage()"]').click();
+ await offlineDownload;await offline.waitForFunction(()=>!previewImageState.busy);
+ assert.equal(await offline.locator('#training-preview-image').isVisible(),true);
+ assert.match(await offline.locator('#training-preview-status').innerText(),/下载|保存/);
+ const firstImage=await offline.locator('#training-preview-image').getAttribute('src');
+ await offline.locator('#training-preview-dialog header button').click();
+ await offline.evaluate(()=>Object.defineProperty(navigator,'clipboard',{value:{write:async()=>{}},configurable:true}));
+ await offline.locator('[onclick="generateImage()"]').click();await offline.waitForFunction(()=>!previewImageState.busy);
+ assert.notEqual(await offline.locator('#training-preview-image').getAttribute('src'),firstImage);
+ await offline.evaluate(()=>{closeTrainingPreview();window.CoursePreview=undefined});
+ await offline.locator('[onclick="generateImage()"]').click();await offline.waitForFunction(()=>!previewImageState.busy);
+ assert.match(await offline.locator('#training-preview-status').innerText(),/图片组件未加载/);
+ await offline.evaluate(()=>{closeTrainingPreview();showToast('生成成功测试')});
+ const toast=await offline.locator('#toast-container').boundingBox();const viewport=offline.viewportSize();assert.ok(toast.y>=0&&toast.y+toast.height<=viewport.height&&toast.x>=0);
+ await offline.close();
+ assert.deepEqual(errors,[]);console.log('PASS standalone HTML preview, clipboard timeout, explicit download, repeated generation, missing-module errors, older Canvas compatibility');console.log('PASS actual preview button, clipboard PNG, download fallback, served asset and '+all.length+' course layouts; '+out);
  }finally{if(browser)await browser.close();if(child&&child.exitCode===null){child.kill();await once(child,'exit')}await fs.rm(dir,{recursive:true,force:true})}
 })().catch(e=>{console.error(e);process.exitCode=1});
