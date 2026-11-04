@@ -50,7 +50,7 @@ function summarize(course){const goals=points(course.objectives);const cards=ste
 function render(model,meta,createCanvas){
 const W=1000,pad=56,gap=20,col=(W-pad*2-gap)/2;
 const cv=createCanvas();cv.width=W;cv.height=1;let ctx=cv.getContext('2d');
-const font='"Microsoft YaHei","PingFang SC",sans-serif';
+const font='"SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif';
 function wrap(text,size,width,bold){ctx.font=(bold?'bold ':'')+size+'px '+font;const out=[];for(const para of String(text||'').split('\n')){let line='';for(const ch of Array.from(para)){if(line&&ctx.measureText(line+ch).width>width){out.push(line);line=ch}else line+=ch}if(line)out.push(line)}return out}
 const title=wrap(model.title,44,640,true),sub=wrap(model.subtitle,25,640,false);
 const headerH=Math.max(184,54+title.length*57+sub.length*38);

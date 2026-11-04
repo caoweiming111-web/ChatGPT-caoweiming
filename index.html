@@ -824,7 +824,7 @@ var compact=[];for(var j=0;j<lines.length;j++){if(!lines[j].length&&compact.leng
 if(!compact.length)compact.push([{text:tr("notFilled"),size:14,bold:false}]);
 return compact
 }
-function richFont(run){return (run.bold?"bold ":"")+Math.max(8,Math.round(run.size))+'px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'}
+function richFont(run){return (run.bold?"bold ":"")+Math.max(8,Math.round(run.size))+'px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'}
 function layoutRichLines(lines,maxWidth,ctx){
 var out=[];
 for(var i=0;i<lines.length;i++){
@@ -918,7 +918,7 @@ if(cur)total+=lh2}
 return total}
 
 var tmpC=document.createElement('canvas');var tctx=tmpC.getContext('2d')
-tctx.font='14px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+tctx.font='14px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
 var fw=cw-24-24
 var objLines=layoutRichLines(extractRichLines('doc-objectives'),fw,tctx)
 var proLines=layoutRichLines(extractRichLines('doc-procedure'),fw,tctx)
@@ -934,7 +934,7 @@ courseImageLayouts.forEach(function(item){
 item.captionLines=item.caption?layoutRichLines(item.caption.split(/\r?\n/).map(function(line){return [{text:line,size:14,bold:false}]}),fw,tctx):[];
 courseImagesH+=item.height+richLayoutHeight(item.captionLines)+24;
 });
-tctx.font='14px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+tctx.font='14px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif';
 function fh(v,mw){return 14+Math.max(wrapH(v||tr('notFilled'),mw,tctx,lh),lh)}
 var hh=82
 var infoH=20+fh(name,fw)+fh(subtitle,fw)+fh(eq,fw)+8
@@ -978,14 +978,14 @@ var x=cx0+24
 
 // Section helper
 function secTitle(label,x2,y2,color){
-cx.font='bold 15px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+cx.font='bold 15px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
 cx.fillStyle=color;cx.fillText(label,x2,y2)
 // underline
 cx.strokeStyle=color+'44';cx.lineWidth=2;cx.beginPath();cx.moveTo(x2,y2+4);cx.lineTo(x2+150,y2+4);cx.stroke()
 return y2+18}
 
 function drawText(text,x2,y2,maxW,color,size){
-cx.font=size+'px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';cx.fillStyle=color
+cx.font=size+'px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif';cx.fillStyle=color
 var lines=text.split('\n');var cy=y2
 for(var l=0;l<lines.length;l++){var line=lines[l];if(!line.trim()){cy+=lh*0.3;continue}
 var cur='';for(var c=0;c<line.length;c++){var test=cur+line[c]
@@ -996,14 +996,14 @@ return cy}
 function secLabel(label,x2,y2,color){
 // colored left bar
 cx.fillStyle=color;cx.fillRect(x2-8,y2-10,3,18)
-cx.font='bold 14px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+cx.font='bold 14px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
 cx.fillStyle=color;cx.fillText(label,x2,y2+2)
 return y2+20}
 
 function drawField(label,value,x2,y2,mw,color){
-cx.font='12px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+cx.font='12px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
 cx.fillStyle='#7a8aa0';cx.fillText(label,x2,y2-2)
-cx.font='14px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+cx.font='14px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
 cx.fillStyle=color||'#e0e4ea'
 var lines=value.split('\n');var cy=y2+18
 for(var l=0;l<lines.length;l++){var line=lines[l];if(!line.trim()){cy+=lh*0.3;continue}
@@ -1016,14 +1016,14 @@ return cy}
 var ypos=y
 
 // MakeX header
-cx.font='bold 13px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+cx.font='bold 13px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
 cx.fillStyle='#556688';cx.fillText('MAKX',x,ypos);ypos+=4
-cx.font='24px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+cx.font='24px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
 var tg2=cx.createLinearGradient(x,0,x+300,0);tg2.addColorStop(0,catColor);tg2.addColorStop(0.5,catColor+'aa');tg2.addColorStop(1,'#e0e4ea')
 cx.fillStyle=tg2;cx.fillText(name,x,ypos+30);ypos+=40
 
 // Category badge
-cx.font='11px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif'
+cx.font='11px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif'
 cx.fillStyle=catColor+'88'
 var badge=infoLabel+' · Slot '+sn
 cx.fillText(badge,x,ypos+4);ypos+=10
@@ -1070,7 +1070,7 @@ ypos=drawRichLines(knowledgeLines,x,ypos,fw,'#e0e4ea',cx);
 ypos=Math.max(ypos+24,Math.max(200,82+hh+infoH+objH+proH+80))
 cx.strokeStyle='rgba(41,121,255,0.06)';cx.lineWidth=1
 cx.beginPath();cx.moveTo(x,ypos);cx.lineTo(x+cw-48,ypos);cx.stroke()
-cx.font='11px "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';cx.fillStyle='#556688'
+cx.font='11px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC",sans-serif';cx.fillStyle='#556688'
 var now=new Date();var ds=now.toLocaleDateString(uiLocale(),{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'})
 cx.fillText(ds+' · MakeX · '+infoLabel,x,ypos+20)
 
