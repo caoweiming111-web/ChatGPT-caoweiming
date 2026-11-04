@@ -3,6 +3,30 @@
 'use strict';
 // Keep blackface text, with explicit CJK, symbol and emoji fallbacks for missing glyphs.
 const FONT_FAMILY='"SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+// Shared with full-lesson exports. Header colors stay separate from the body text.
+const styles=Object.freeze({
+tech:Object.freeze({background:'#070c18',card:'#0d1424',header:'#111e35',title:'#eff6ff',subtitle:'#b6c7dd',text:'#cbd5e1',muted:'#8da9ca',accent:'#53d9f0',line:'#2b6b8b',step:'#15243a',growth:'#1a2a3f',watermark:'#ffffff',dark:true,headerTitle:'#ffffff',headerSubtitle:'#c0d8ee',headerMeta:'#b6c7dd',badge:'#69e0ed',stepTitle:'#8ce4ee',growthText:'#d5e3f2'}),
+paper:Object.freeze({background:'#e9edf2',card:'#ffffff',header:'#eaf0f8',title:'#22324a',subtitle:'#53657b',text:'#3f5066',muted:'#6b7c93',accent:'#2a61a5',line:'#94add0',step:'#f0f4f9',growth:'#edf3fb',watermark:'#1c304d',dark:false,headerTitle:'#22324a',headerSubtitle:'#4c6380',headerMeta:'#53657b',badge:'#2a61a5',stepTitle:'#30557e',growthText:'#3f5066'}),
+forest:Object.freeze({background:'#e4eaea',card:'#fffef5',header:'#194e51',title:'#193e43',subtitle:'#496062',text:'#41595b',muted:'#53777a',accent:'#255960',line:'#c4af60',step:'#eef3ed',growth:'#fcf3d6',watermark:'#17383d',dark:false,headerTitle:'#ffffff',headerSubtitle:'#c9e1df',headerMeta:'#d0e2df',badge:'#d8c474',stepTitle:'#25555a',growthText:'#4a5b54'}),
+warm:Object.freeze({background:'#eee5d7',card:'#fffaf0',header:'#755441',title:'#4d372b',subtitle:'#7c6553',text:'#68513e',muted:'#91735a',accent:'#9c5a2e',line:'#c59858',step:'#f5ecdf',growth:'#faedcc',watermark:'#4d372b',dark:false,headerTitle:'#fffaf1',headerSubtitle:'#efdfc8',headerMeta:'#edddc6',badge:'#f0cd86',stepTitle:'#805334',growthText:'#68513e'})
+});
+// Draw last so the same faint mark covers text, cards and attached lesson images.
+function drawWatermark(ctx,width,height,options){
+if(!(width>0&&height>0))return;
+const dark=!!(options&&options.dark);
+ctx.save();
+try{
+ctx.globalCompositeOperation='source-over';ctx.globalAlpha=dark?0.045:0.035;
+ctx.fillStyle=options&&options.color||(dark?'#ffffff':'#17383d');
+ctx.font='bold 58px '+FONT_FAMILY;ctx.textAlign='center';ctx.textBaseline='middle';
+ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
+for(let row=0,y=120;y<height+100;row++,y+=280){
+for(let x=100+(row%2?180:0);x<width+100;x+=360){
+ctx.save();try{ctx.translate(x,y);ctx.rotate(-Math.PI/7);ctx.fillText('Kclub',0,0)}finally{ctx.restore()}
+}
+}
+}finally{ctx.restore()}
+}
 function wordMarkers(value){return String(value||'').replace(/^[ \t]*[\uf0b7\uf0a7\uf0fc\uf0d8][ \t]*/gm,'')}
 function unreadable(ch){
 const n=ch.codePointAt(0);
@@ -64,6 +88,8 @@ return cards
 }
 function summarize(course){const goals=points(course.objectives);const cards=steps(course.procedure);return {warnings:textWarnings(course),title:clean(course.name)||'未命名课程',subtitle:short(course.subtitle,100),focus:short(goals[0]||course.subtitle||course.name,100),intro:short(goals.slice(1,3).join('；')||course.subtitle,240),steps:cards.length?cards:[{title:'课堂流程待补充',body:'请在课程中填写教学流程后重新生成。'}],growth:goals.length?goals.slice(0,3).map(s=>short(s,100)):['课程目标待补充，请完善课程后重新生成。']}}
 function render(model,meta,createCanvas){
+meta=meta||{};
+const palette=Object.prototype.hasOwnProperty.call(styles,meta.style)?styles[meta.style]:styles.forest;
 const W=1000,pad=56,gap=20,col=(W-pad*2-gap)/2;
 const cv=createCanvas();cv.width=W;cv.height=1;let ctx=cv.getContext('2d');
 const font=FONT_FAMILY;
@@ -83,16 +109,17 @@ ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y
 }
 function round(x,y,w,h,r,color){roundedPath(x,y,w,h,r);ctx.fillStyle=color;ctx.fill()}
 function text(ls,x,y,size,color,bold,lineH){ctx.font=(bold?'bold ':'')+size+'px '+font;ctx.fillStyle=color;for(const line of ls){ctx.fillText(line,x,y);y+=lineH}return y}
-ctx.fillStyle='#e4eaea';ctx.fillRect(0,0,W,H);round(8,8,W-16,H-16,32,'#fffef5');
-ctx.save();roundedPath(8,8,W-16,H-16,32);ctx.clip();ctx.fillStyle='#194e51';ctx.fillRect(8,8,W-16,headerH);ctx.restore();
-let y=text(title,pad,48,44,'#ffffff',true,57);text(sub,pad,y+12,25,'#c9e1df',false,38);
-ctx.textAlign='right';text(['训练预告'],W-pad,52,25,'#d8c474',false,36);text([meta.code],W-pad,97,19,'#d0e2df',false,29);text(['生成于 '+meta.date],W-pad,128,18,'#d0e2df',false,28);ctx.textAlign='left';
-function section(n,label,y){text([n],pad,y+3,24,'#53777a',true,32);ctx.fillStyle='#c4af60';ctx.fillRect(pad,y+35,28,2);text([label],pad+48,y,30,'#193e43',true,42);return y+54}
-y=section('01','训练内容',headerH+44);y=text(focus,pad,y,26,'#255960',true,40);if(intro.length)y=text(intro,pad,y+18,24,'#41595b',false,39);
+ctx.fillStyle=palette.background;ctx.fillRect(0,0,W,H);round(8,8,W-16,H-16,32,palette.card);
+ctx.save();roundedPath(8,8,W-16,H-16,32);ctx.clip();ctx.fillStyle=palette.header;ctx.fillRect(8,8,W-16,headerH);ctx.restore();
+let y=text(title,pad,48,44,palette.headerTitle,true,57);text(sub,pad,y+12,25,palette.headerSubtitle,false,38);
+ctx.textAlign='right';text(['训练预告'],W-pad,52,25,palette.badge,false,36);text([meta.code],W-pad,97,19,palette.headerMeta,false,29);text(['生成于 '+meta.date],W-pad,128,18,palette.headerMeta,false,28);ctx.textAlign='left';
+function section(n,label,y){text([n],pad,y+3,24,palette.muted,true,32);ctx.fillStyle=palette.line;ctx.fillRect(pad,y+35,28,2);text([label],pad+48,y,30,palette.title,true,42);return y+54}
+y=section('01','训练内容',headerH+44);y=text(focus,pad,y,26,palette.accent,true,40);if(intro.length)y=text(intro,pad,y+18,24,palette.text,false,39);
 y=section('02','课堂流程',y+40);
-for(let row=0;row<rows.length;row++){for(let j=0;j<2;j++){const card=cards[row*2+j];if(!card)continue;const x=pad+j*(col+gap);round(x,y,col,rows[row],18,'#eef3ed');const yy=text(card.title,x+24,y+24,26,'#25555a',true,38);text(card.body,x+24,yy+12,23,'#496062',false,36)}y+=rows[row]+gap}
-y=section('03','成长收获',y+20);round(pad,y,W-pad*2,growthH,18,'#fcf3d6');let gy=y+24;for(const g of growth)gy=text(g,pad+28,gy,24,'#4a5b54',false,38)+12;
+for(let row=0;row<rows.length;row++){for(let j=0;j<2;j++){const card=cards[row*2+j];if(!card)continue;const x=pad+j*(col+gap);round(x,y,col,rows[row],18,palette.step);const yy=text(card.title,x+24,y+24,26,palette.stepTitle,true,38);text(card.body,x+24,yy+12,23,palette.subtitle,false,36)}y+=rows[row]+gap}
+y=section('03','成长收获',y+20);round(pad,y,W-pad*2,growthH,18,palette.growth);let gy=y+24;for(const g of growth)gy=text(g,pad+28,gy,24,palette.growthText,false,38)+12;
+drawWatermark(ctx,W,H,{dark:palette.dark,color:palette.watermark});
 return cv
 }
-return {summarize,steps,points,render,prepareFonts,fontFamily:FONT_FAMILY};
+return {summarize,steps,points,render,prepareFonts,styles,drawWatermark,fontFamily:FONT_FAMILY};
 });

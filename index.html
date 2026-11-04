@@ -243,6 +243,21 @@
   .course-image-card label{display:block;font-size:12px;margin-top:10px;color:var(--text-dim)}
   .course-image-card textarea{display:block;width:100%;margin-top:6px;resize:vertical;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font:inherit}
   .course-image-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.course-image-actions button{font-size:12px;padding:6px 10px}.course-image-actions button:disabled{opacity:.35;cursor:default}
+
+  :root[data-page-style="paper"]{--bg:#f1f4f8;--bg2:#ffffff;--card-bg:#ffffff;--text:#253448;--text-dim:#526178;--blue:#245db0;--cyan:#006f7c;--red:#b33348;--border:rgba(36,93,176,.25);--field-bg:#ffffff;--row-bg:rgba(255,255,255,.8)}
+  :root[data-page-style="forest"]{--bg:#e8f1eb;--bg2:#f8fcf9;--card-bg:#f8fcf9;--text:#1e4037;--text-dim:#48685e;--blue:#266853;--cyan:#186a65;--red:#a93f42;--border:rgba(38,104,83,.25);--field-bg:#ffffff;--row-bg:rgba(248,252,249,.85)}
+  :root[data-page-style="warm"]{--bg:#f6eee2;--bg2:#fffaf2;--card-bg:#fffaf2;--text:#4c392b;--text-dim:#735e4b;--blue:#965a25;--cyan:#746122;--red:#a83f3d;--border:rgba(150,90,37,.25);--field-bg:#fffdf8;--row-bg:rgba(255,250,242,.85)}
+  html[data-page-style]:not([data-page-style="tech"]) body::after{opacity:0}
+  html[data-page-style]:not([data-page-style="tech"]) .bg-grid{background-image:none}
+  html[data-page-style]:not([data-page-style="tech"]) .bg-grid::before{background:none}
+  html[data-page-style]:not([data-page-style="tech"]) .hex-deco,html[data-page-style]:not([data-page-style="tech"]) .glow-orb{display:none}
+  html[data-page-style]:not([data-page-style="tech"]) .slot-row{background:var(--row-bg);border-color:var(--border)}
+  html[data-page-style]:not([data-page-style="tech"]) .doc-field input,html[data-page-style]:not([data-page-style="tech"]) .doc-field textarea,html[data-page-style]:not([data-page-style="tech"]) .doc-editor,html[data-page-style]:not([data-page-style="tech"]) .slot-input,html[data-page-style]:not([data-page-style="tech"]) .paste-textarea{background:var(--field-bg);border-color:var(--border)}
+  html[data-page-style]:not([data-page-style="tech"]) .doc-section-title,html[data-page-style]:not([data-page-style="tech"]) .doc-header,html[data-page-style]:not([data-page-style="tech"]) .cat-header{border-color:var(--border)}
+  html[data-page-style]:not([data-page-style="tech"]) .card-explorer2{--accent:var(--cyan)}
+  .background-settings-fields{display:grid;gap:20px;margin:22px 0}
+  .background-settings-fields label{display:grid;gap:8px;font-size:14px}
+  .background-settings-fields select{width:100%;font:inherit;padding:12px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text)}
 </style>
 </head>
 <body>
@@ -262,7 +277,7 @@
       <button id="btn-dash" onclick="openDashboard()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">📊 统计</button>
       <button id="btn-print" onclick="printView()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">🖨️ 打印</button>
       <button id="btn-sync" onclick="syncToGitHub()" title="保存课程并上传到 ChatGPT-caoweiming/main" style="background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.25);color:var(--cyan);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">☁ 同步 GitHub</button>
-      <button id="btn-theme" onclick="toggleTheme()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--mono)">🌓</button>
+      <button type="button" id="btn-background" onclick="openBackgroundSettings()" data-i18n="backgroundSettings" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px">🎨 背景风格</button>
       <button id="btn-lang" onclick="toggleLang()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);padding:5px 10px;border-radius:4px;font-size:11px;font-family:var(--mono);cursor:pointer">中文</button>
 <span id="ws-status" style="position:absolute;right:40px;top:24px;font-size:11px;font-family:var(--mono);color:var(--text-dim);letter-spacing:1px">○ 离线</span>
 <div class="logo-sub">Creative · Explore · Conquer</div>
@@ -537,6 +552,7 @@ var docContext = null;
 var CATS = {inspire:{label:'Inspire',labelEn:'Inspire',icon:'🚀',accent:'accent-blue',color:'#2979ff'},explorer:{label:'Explorer 第一年',labelEn:'Explorer Year 1',icon:'🔭',accent:'accent-cyan',color:'#00e5ff'},explorer2:{label:'Explorer 第二年',labelEn:'Explorer Year 2',icon:'🧪',accent:'accent-cyan',color:'#00bcd4'},challenge:{label:'Challenge',labelEn:'Challenge',icon:'⚡',accent:'accent-red',color:'#ff1744'}};
 var I18N = {
 zh:{
+backgroundSettings:"🎨 背景风格",pageBackground:"页面背景",imageBackground:"导出图片背景",styleTech:"深色科技",stylePaper:"浅色简洁",styleForest:"森林绿",styleWarm:"暖色纸张",styleOriginal:"保持各自原风格",backgroundHint:"页面和图片可分别设置，自动保存。图片风格将在下次生成时使用。",backgroundSaveFailed:"背景选择未能保存，请检查浏览器存储空间。",backgroundDone:"完成",
 dashboard:"统计",print:"打印",sync:"☁ 同步 GitHub",syncTitle:"保存课程并上传到 ChatGPT-caoweiming/main",
 back:"返回",backToCourses:"返回课程列表",chooseModule:"选择一个模块开始你的旅程",
 inspireDesc:"灵感 · 启蒙 · 创造的火花",explorer1:"Explorer 第一年",explorer1Desc:"探索 · 基础 · 入门实践",explorer2:"Explorer 第二年",explorer2Desc:"探索 · 进阶 · 深入实践",challengeDesc:"挑战 · 突破 · 极限的超越",
@@ -552,6 +568,7 @@ uploadSaved:"PPT 已保存",synced:"✅ 已同步到项目文件",syncFailed:"�
 printTitle:"MakeX 课程表",nameHeader:"名称",equipmentHeader:"器材",createdAt:"创建时间"
 },
 en:{
+backgroundSettings:"🎨 Backgrounds",pageBackground:"Page background",imageBackground:"Export image background",styleTech:"Dark technology",stylePaper:"Light minimal",styleForest:"Forest green",styleWarm:"Warm paper",styleOriginal:"Keep original styles",backgroundHint:"Page and image styles save separately. Image style applies to the next export.",backgroundSaveFailed:"Could not save background settings. Check browser storage.",backgroundDone:"Done",
 dashboard:"Stats",print:"Print",sync:"☁ Sync GitHub",syncTitle:"Save lessons and push to ChatGPT-caoweiming/main",
 back:"Back",backToCourses:"Back to Courses",chooseModule:"Choose a module to begin",
 inspireDesc:"Inspiration · Discovery · Creativity",explorer1:"Explorer Year 1",explorer1Desc:"Explore · Fundamentals · Practice",explorer2:"Explorer Year 2",explorer2Desc:"Explore · Advanced · Build",challengeDesc:"Challenge · Breakthrough · Beyond",
@@ -950,7 +967,7 @@ previewImageState.warnings=model.warnings||[];
 var saved=true;try{saveDocumentData()}catch(error){saved=false}
 if(document.fonts){try{await previewDeadline(CoursePreview.prepareFonts(document.fonts,model),1500)}catch(error){/* Keep the installed system fallback when optional fonts cannot load. */}}
 var date=new Date().toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'});
-var canvas=CoursePreview.render(model,{code:catLabel(context.cat)+' · '+pad(context.index+1),date:date},function(){return document.createElement('canvas')});
+var canvas=CoursePreview.render(model,{code:catLabel(context.cat)+' · '+pad(context.index+1),date:date,style:getExportStyle()==='original'?'forest':getExportStyle()},function(){return document.createElement('canvas')});
 var blob=await previewDeadline(new Promise(function(resolve){canvas.toBlob(resolve,'image/png')}),10000);
 if(!blob)throw Error('EMPTY_IMAGE');
 var now=new Date();previewImageState.generatedAt=now.toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false});
@@ -966,9 +983,11 @@ previewStatus(error.message==='PREVIEW_MODULE_MISSING'?(location.protocol==='fil
 async function generateFullDocumentImage(){
 if(!docContext){alert(tr('openDocFirst'));return}
 saveDocumentData()
+var fullCategory=docContext.cat;
 var slot=data[docContext.cat][docContext.index];var info=CATS[docContext.cat];var infoLabel=catLabel(docContext.cat);var sn=pad(docContext.index+1)
 var name=slot.name||tr('untitled');var subtitle=slot.subtitle||'';var eq=slot.equipment||''
-var W=800;var p=36;var cw=W-p*2;var lh=24;var catColor=info.color
+var exportStyle=getExportStyle();var fullStyle=CoursePreview.styles[exportStyle==='original'?'tech':exportStyle];
+var W=800;var p=36;var cw=W-p*2;var lh=24;var catColor=exportStyle==='original'?info.color:fullStyle.accent
 
 function wrapH(text,maxW,font,lh2){
 var lines=text.split('\n');var total=0
@@ -1008,13 +1027,13 @@ var H=Math.max(8000,Math.ceil(minFooterY+knowledgeH+courseImagesH+500));
 var cv=document.createElement('canvas');cv.width=W;cv.height=H;var cx=cv.getContext('2d')
 
 // Background
-var bg=cx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#060a16');bg.addColorStop(0.5,'#0c1428');bg.addColorStop(1,'#060a16')
+var bg=cx.createLinearGradient(0,0,0,H);bg.addColorStop(0,fullStyle.background);bg.addColorStop(0.5,fullStyle.background);bg.addColorStop(1,fullStyle.background)
 cx.fillStyle=bg;cx.fillRect(0,0,W,H)
 
 // Grid
 cx.strokeStyle='rgba(41,121,255,0.025)';cx.lineWidth=1
-for(var x=0;x<W;x+=40){cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke()}
-for(var y=0;y<H;y+=40){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke()}
+for(var x=0;fullStyle.dark&&x<W;x+=40){cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke()}
+for(var y=0;fullStyle.dark&&y<H;y+=40){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke()}
 
 // Top glow
 var tg=cx.createRadialGradient(W/2,-80,0,W/2,-80,300);tg.addColorStop(0,catColor+'15');tg.addColorStop(1,'transparent')
@@ -1026,8 +1045,8 @@ function rrc(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.lineTo(x+w-r,y);cx.qu
 cx.lineTo(x+w,y+h-r);cx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);cx.lineTo(x+r,y+h)
 cx.quadraticCurveTo(x,y+h,x,y+h-r);cx.lineTo(x,y+r);cx.quadraticCurveTo(x,y,x+r,y);cx.closePath()}
 rrc(cx0,cy0,cw0,ch0,16)
-cx.fillStyle='rgba(10,14,30,0.88)';cx.fill()
-cx.strokeStyle='rgba(41,121,255,0.08)';cx.lineWidth=1;cx.stroke()
+cx.fillStyle=fullStyle.card;cx.fill()
+cx.strokeStyle=fullStyle.line;cx.lineWidth=1;cx.stroke()
 
 // Top accent bar
 var bg2=cx.createLinearGradient(cx0+1,0,cx0+cw0-1,0)
@@ -1063,9 +1082,9 @@ return y2+20}
 
 function drawField(label,value,x2,y2,mw,color){
 cx.font='12px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'
-cx.fillStyle='#7a8aa0';cx.fillText(label,x2,y2-2)
+cx.fillStyle=fullStyle.muted;cx.fillText(label,x2,y2-2)
 cx.font='14px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'
-cx.fillStyle=color||'#e0e4ea'
+cx.fillStyle=color||fullStyle.text
 var lines=value.split('\n');var cy=y2+18
 for(var l=0;l<lines.length;l++){var line=lines[l];if(!line.trim()){cy+=lh*0.3;continue}
 var cur='';for(var c=0;c<line.length;c++){var test=cur+line[c]
@@ -1078,9 +1097,9 @@ var ypos=y
 
 // MakeX header
 cx.font='bold 13px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'
-cx.fillStyle='#556688';cx.fillText('MAKX',x,ypos);ypos+=4
+cx.fillStyle=fullStyle.muted;cx.fillText('Kclub',x,ypos);ypos+=4
 cx.font='24px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'
-var tg2=cx.createLinearGradient(x,0,x+300,0);tg2.addColorStop(0,catColor);tg2.addColorStop(0.5,catColor+'aa');tg2.addColorStop(1,'#e0e4ea')
+var tg2=cx.createLinearGradient(x,0,x+300,0);tg2.addColorStop(0,catColor);tg2.addColorStop(0.5,catColor+'aa');tg2.addColorStop(1,fullStyle.text)
 cx.fillStyle=tg2;cx.fillText(name,x,ypos+30);ypos+=40
 
 // Category badge
@@ -1090,25 +1109,25 @@ var badge=infoLabel+' · Slot '+sn
 cx.fillText(badge,x,ypos+4);ypos+=10
 
 // Divider
-cx.strokeStyle='rgba(41,121,255,0.08)';cx.lineWidth=1;cx.setLineDash([3,4])
+cx.strokeStyle=fullStyle.line;cx.lineWidth=1;cx.setLineDash([3,4])
 cx.beginPath();cx.moveTo(x,ypos+12);cx.lineTo(x+cw-48,ypos+12);cx.stroke();cx.setLineDash([])
 ypos+=28
 
 // Section 1: 课程信息
 ypos=secLabel(tr('courseInfo'),x,ypos,catColor)
 ypos=drawField(tr('courseName'),name,x,ypos,cw-24-24,catColor)
-ypos=drawField(tr('courseSubtitle'),subtitle||tr('notFilled'),x,ypos,cw-24-24,'#c0c8d4')
-ypos=drawField(tr('courseEquipment'),eq||tr('notFilled'),x,ypos,cw-24-24,'#c0c8d4')
+ypos=drawField(tr('courseSubtitle'),subtitle||tr('notFilled'),x,ypos,cw-24-24,fullStyle.text)
+ypos=drawField(tr('courseEquipment'),eq||tr('notFilled'),x,ypos,cw-24-24,fullStyle.text)
 ypos+=8
 
 // Section 2: 课程目标
 ypos=secLabel(tr('objectives'),x,ypos,catColor)
-ypos=drawRichLines(objLines,x,ypos,cw-24-24,'#e0e4ea',cx)
+ypos=drawRichLines(objLines,x,ypos,cw-24-24,fullStyle.text,cx)
 ypos+=8
 
 // Section 3: 课程基本流程
 ypos=secLabel(tr('procedure'),x,ypos,catColor)
-ypos=drawRichLines(proLines,x,ypos,cw-24-24,'#e0e4ea',cx)
+ypos=drawRichLines(proLines,x,ypos,cw-24-24,fullStyle.text,cx)
 
 // Course images retain their order and captions in the generated lesson.
 if(courseImageLayouts.length){
@@ -1116,7 +1135,7 @@ ypos+=12;ypos=secLabel('课程图片',x,ypos,catColor);
 courseImageLayouts.forEach(function(item){
 cx.drawImage(item.image,x+(fw-item.width)/2,ypos,item.width,item.height);
 ypos+=item.height+8;
-if(item.captionLines.length)ypos=drawRichLines(item.captionLines,x,ypos,fw,'#e0e4ea',cx);
+if(item.captionLines.length)ypos=drawRichLines(item.captionLines,x,ypos,fw,fullStyle.text,cx);
 ypos+=16;
 });
 }
@@ -1124,27 +1143,25 @@ ypos+=16;
 if(knowledgeLines.length){
 ypos+=12;
 ypos=secLabel('学校知识点',x,ypos,catColor);
-ypos=drawRichLines(knowledgeLines,x,ypos,fw,'#e0e4ea',cx);
+ypos=drawRichLines(knowledgeLines,x,ypos,fw,fullStyle.text,cx);
 }
 
 // Footer
 ypos=Math.max(ypos+24,Math.max(200,82+hh+infoH+objH+proH+80))
-cx.strokeStyle='rgba(41,121,255,0.06)';cx.lineWidth=1
+cx.strokeStyle=fullStyle.line;cx.lineWidth=1
 cx.beginPath();cx.moveTo(x,ypos);cx.lineTo(x+cw-48,ypos);cx.stroke()
-cx.font='11px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';cx.fillStyle='#556688'
+cx.font='11px "SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';cx.fillStyle=fullStyle.muted
 var now=new Date();var ds=now.toLocaleDateString(uiLocale(),{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'})
-cx.fillText(ds+' · MakeX · '+infoLabel,x,ypos+20)
+cx.fillText(ds+' · Kclub · '+infoLabel,x,ypos+20)
 
 var finalH=Math.min(Math.ceil(ypos+80),H);if(finalH<H){var cc=document.createElement('canvas');cc.width=W;cc.height=finalH;cc.getContext('2d').drawImage(cv,0,0);cv=cc}
-// Copy to clipboard
-cv.toBlob(function(blob){
-navigator.clipboard.write([new ClipboardItem({'image/png':blob})])
-.then(function(){alert(tr('imageCopied'))})
-.catch(function(){
-var a=document.createElement('a');a.href=cv.toDataURL('image/png')
-a.download='makex_'+info.label.toLowerCase()+'_'+sn+'.png'
-document.body.appendChild(a);a.click();document.body.removeChild(a)
-alert(tr('imageDownloaded'))})})}
+// Apply branding to the actual exported dimensions, including course images and long lessons.
+CoursePreview.drawWatermark(cv.getContext('2d'),cv.width,cv.height,{dark:fullStyle.dark});
+var blob=await new Promise(function(resolve){cv.toBlob(resolve,'image/png')});
+if(!blob){showToast('图片生成失败，请重试');return}
+try{if(!navigator.clipboard||typeof ClipboardItem==='undefined')throw Error('clipboard unavailable');await previewDeadline(navigator.clipboard.write([new ClipboardItem({'image/png':blob})]),2000);showToast(tr('imageCopied'))}
+catch(error){var link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='kclub_lesson_'+fullCategory+'_'+sn+'.png';document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(link.href)},1000);showToast(tr('imageDownloaded'))}
+}
 /* ===== IMAGE TOOLBAR ===== */
 var selectedImg=null;
 document.addEventListener('click',function(e){
@@ -1263,9 +1280,34 @@ updateCounts();
 
 /* === NEW FEATURES === */
 function showToast(t){var e=document.getElementById("toast-container");if(!e){e=document.createElement("div");e.id="toast-container";e.style.cssText="position:fixed;bottom:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:8px";document.body.appendChild(e)}var n=document.createElement("div");n.style.cssText="padding:12px 20px;border-radius:8px;background:var(--bg2);border:1px solid var(--border);font-size:13px;color:var(--text);animation:toastIn 0.3s ease-out";n.textContent=t;e.appendChild(n);setTimeout(function(){n.style.opacity="0";n.style.transition="opacity 0.3s";setTimeout(function(){n.remove()},300)},2500)}
-function getTheme(){return localStorage.getItem("makex_theme")||"dark"}
-function applyTheme(t){if(t==="light")document.documentElement.classList.add("light");else document.documentElement.classList.remove("light");localStorage.setItem("makex_theme",t)}
-function toggleTheme(){var t=getTheme();applyTheme(t==="light"?"dark":"light")}
+var PAGE_STYLE_IDS=['tech','paper','forest','warm'];
+function readStylePreference(key,fallback){try{return localStorage.getItem(key)||fallback}catch(error){return fallback}}
+function getPageStyle(){var value=readStylePreference('makex_page_style','');return PAGE_STYLE_IDS.indexOf(value)>=0?value:(readStylePreference('makex_theme','dark')==='light'?'paper':'tech')}
+function getExportStyle(){var value=readStylePreference('makex_export_style','original');return value==='original'||PAGE_STYLE_IDS.indexOf(value)>=0?value:'original'}
+function applyPageStyle(value){
+if(PAGE_STYLE_IDS.indexOf(value)<0)value='tech';
+document.documentElement.dataset.pageStyle=value;document.documentElement.classList.toggle('light',value!=='tech');
+var select=document.getElementById('page-style-select');if(select)select.value=value;
+document.querySelectorAll('.theme-header').forEach(function(header){paintThemeHeader(header,getThemeColor(currentCategory,header.dataset.theme))})
+}
+function setPageStyle(value){
+if(PAGE_STYLE_IDS.indexOf(value)<0)return;
+applyPageStyle(value);
+try{localStorage.setItem('makex_page_style',value);localStorage.setItem('makex_theme',value==='tech'?'dark':'light')}catch(error){showToast(tr('backgroundSaveFailed'))}
+}
+function setExportStyle(value){
+if(value!=='original'&&PAGE_STYLE_IDS.indexOf(value)<0)return;
+try{localStorage.setItem('makex_export_style',value)}catch(error){showToast(tr('backgroundSaveFailed'))}
+var select=document.getElementById('export-style-select');if(select)select.value=getExportStyle()
+}
+function openBackgroundSettings(){
+var dialog=document.getElementById('background-settings-dialog');document.getElementById('page-style-select').value=getPageStyle();document.getElementById('export-style-select').value=getExportStyle();
+if(!dialog.open){if(dialog.showModal)dialog.showModal();else dialog.setAttribute('open','')}
+}
+function closeBackgroundSettings(){var dialog=document.getElementById('background-settings-dialog');if(dialog.close)dialog.close();else dialog.removeAttribute('open')}
+function getTheme(){return getPageStyle()==='tech'?'dark':'light'}
+function applyTheme(value){setPageStyle(value==='light'?'paper':'tech')}
+function toggleTheme(){applyTheme(getTheme()==='light'?'dark':'light')}
 
 function toggleLang(){currentLang=currentLang==="zh"?"en":"zh";try{localStorage.setItem("makex_lang",currentLang)}catch(e){}applyLang(currentLang)}
 function applyLang(lang){
@@ -1327,7 +1369,7 @@ h+="</table>"
 }
 var w=window.open("");w.document.write("<html><head><title>"+escapeHtml(tr("printTitle"))+"</title><style>body{font-family:sans-serif;padding:20px}</style></head><body>"+h+'<scr'+'ipt>window.print();window.close()<\/script></body></html>');w.document.close()
 }
-applyTheme(getTheme());document.addEventListener("DOMContentLoaded",function(){applyLang(currentLang)});updateCounts();setTimeout(function(){var h=document.getElementById("shortcut-hint");if(h){h.classList.add("visible");setTimeout(function(){h.classList.remove("visible")},5000)}},1000);document.addEventListener("keydown",function(e){if(e.ctrlKey&&e.key==="s"){e.preventDefault();var d=document.getElementById("view-document");if(d&&d.classList.contains("active")){saveDocumentData();showToast(tr('saved'));flashSaveIndicator()}}if(e.ctrlKey&&e.key==="p"){e.preventDefault();printView()}if(e.ctrlKey&&e.key==="f"){e.preventDefault();var s=document.getElementById("search-input");if(s){s.focus();s.select()}}});
+applyPageStyle(getPageStyle());document.addEventListener("DOMContentLoaded",function(){applyLang(currentLang)});updateCounts();setTimeout(function(){var h=document.getElementById("shortcut-hint");if(h){h.classList.add("visible");setTimeout(function(){h.classList.remove("visible")},5000)}},1000);document.addEventListener("keydown",function(e){if(e.ctrlKey&&e.key==="s"){e.preventDefault();var d=document.getElementById("view-document");if(d&&d.classList.contains("active")){saveDocumentData();showToast(tr('saved'));flashSaveIndicator()}}if(e.ctrlKey&&e.key==="p"){e.preventDefault();printView()}if(e.ctrlKey&&e.key==="f"){e.preventDefault();var s=document.getElementById("search-input");if(s){s.focus();s.select()}}});
 
 var PPT_SERVER='http://localhost:3456';
 function handlePptDrop(files){handlePptFiles(files)}
@@ -1353,6 +1395,14 @@ function removePpt(i){if(!docContext)return;var slot=data[docContext.cat][docCon
 <div class="save-indicator" id="save-indicator"><span class="dot"></span><span data-i18n="autoSave">自动保存</span></div>
 <div class="shortcut-hint" id="shortcut-hint" data-i18n="shortcutHint">Ctrl+S 保存 · Ctrl+P 打印 · Ctrl+F 搜索</div>
 <div class="toast-container" id="toast-container"></div>
+<dialog id="background-settings-dialog" class="preview-dialog" aria-labelledby="background-settings-title">
+<header><h2 id="background-settings-title" data-i18n="backgroundSettings">🎨 背景风格</h2><button type="button" class="btn-secondary background-settings-close" onclick="closeBackgroundSettings()" data-i18n="backgroundDone">完成</button></header>
+<p data-i18n="backgroundHint">页面和图片可分别设置，自动保存。图片风格将在下次生成时使用。</p>
+<div class="background-settings-fields">
+<label><span data-i18n="pageBackground">页面背景</span><select id="page-style-select" onchange="setPageStyle(this.value)"><option value="tech" data-i18n="styleTech">深色科技</option><option value="paper" data-i18n="stylePaper">浅色简洁</option><option value="forest" data-i18n="styleForest">森林绿</option><option value="warm" data-i18n="styleWarm">暖色纸张</option></select></label>
+<label><span data-i18n="imageBackground">导出图片背景</span><select id="export-style-select" onchange="setExportStyle(this.value)"><option value="original" data-i18n="styleOriginal">保持各自原风格</option><option value="tech" data-i18n="styleTech">深色科技</option><option value="paper" data-i18n="stylePaper">浅色简洁</option><option value="forest" data-i18n="styleForest">森林绿</option><option value="warm" data-i18n="styleWarm">暖色纸张</option></select></label>
+</div>
+</dialog>
 <dialog id="training-preview-dialog" class="preview-dialog" aria-labelledby="training-preview-title">
   <header><h2 id="training-preview-title">训练预告图片</h2><button type="button" class="btn-secondary" onclick="closeTrainingPreview()">关闭</button></header>
   <p id="training-preview-status" role="status" aria-live="polite"></p>
@@ -1365,6 +1415,30 @@ function removePpt(i){if(!docContext)return;var slot=data[docContext.cat][docCon
 'use strict';
 // Keep blackface text, with explicit CJK, symbol and emoji fallbacks for missing glyphs.
 const FONT_FAMILY='"SimHei","黑体","Heiti SC","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Noto Sans SC","Segoe UI Symbol","Noto Sans Symbols 2","Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+// Shared with full-lesson exports. Header colors stay separate from the body text.
+const styles=Object.freeze({
+tech:Object.freeze({background:'#070c18',card:'#0d1424',header:'#111e35',title:'#eff6ff',subtitle:'#b6c7dd',text:'#cbd5e1',muted:'#8da9ca',accent:'#53d9f0',line:'#2b6b8b',step:'#15243a',growth:'#1a2a3f',watermark:'#ffffff',dark:true,headerTitle:'#ffffff',headerSubtitle:'#c0d8ee',headerMeta:'#b6c7dd',badge:'#69e0ed',stepTitle:'#8ce4ee',growthText:'#d5e3f2'}),
+paper:Object.freeze({background:'#e9edf2',card:'#ffffff',header:'#eaf0f8',title:'#22324a',subtitle:'#53657b',text:'#3f5066',muted:'#6b7c93',accent:'#2a61a5',line:'#94add0',step:'#f0f4f9',growth:'#edf3fb',watermark:'#1c304d',dark:false,headerTitle:'#22324a',headerSubtitle:'#4c6380',headerMeta:'#53657b',badge:'#2a61a5',stepTitle:'#30557e',growthText:'#3f5066'}),
+forest:Object.freeze({background:'#e4eaea',card:'#fffef5',header:'#194e51',title:'#193e43',subtitle:'#496062',text:'#41595b',muted:'#53777a',accent:'#255960',line:'#c4af60',step:'#eef3ed',growth:'#fcf3d6',watermark:'#17383d',dark:false,headerTitle:'#ffffff',headerSubtitle:'#c9e1df',headerMeta:'#d0e2df',badge:'#d8c474',stepTitle:'#25555a',growthText:'#4a5b54'}),
+warm:Object.freeze({background:'#eee5d7',card:'#fffaf0',header:'#755441',title:'#4d372b',subtitle:'#7c6553',text:'#68513e',muted:'#91735a',accent:'#9c5a2e',line:'#c59858',step:'#f5ecdf',growth:'#faedcc',watermark:'#4d372b',dark:false,headerTitle:'#fffaf1',headerSubtitle:'#efdfc8',headerMeta:'#edddc6',badge:'#f0cd86',stepTitle:'#805334',growthText:'#68513e'})
+});
+// Draw last so the same faint mark covers text, cards and attached lesson images.
+function drawWatermark(ctx,width,height,options){
+if(!(width>0&&height>0))return;
+const dark=!!(options&&options.dark);
+ctx.save();
+try{
+ctx.globalCompositeOperation='source-over';ctx.globalAlpha=dark?0.045:0.035;
+ctx.fillStyle=options&&options.color||(dark?'#ffffff':'#17383d');
+ctx.font='bold 58px '+FONT_FAMILY;ctx.textAlign='center';ctx.textBaseline='middle';
+ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
+for(let row=0,y=120;y<height+100;row++,y+=280){
+for(let x=100+(row%2?180:0);x<width+100;x+=360){
+ctx.save();try{ctx.translate(x,y);ctx.rotate(-Math.PI/7);ctx.fillText('Kclub',0,0)}finally{ctx.restore()}
+}
+}
+}finally{ctx.restore()}
+}
 function wordMarkers(value){return String(value||'').replace(/^[ \t]*[\uf0b7\uf0a7\uf0fc\uf0d8][ \t]*/gm,'')}
 function unreadable(ch){
 const n=ch.codePointAt(0);
@@ -1426,6 +1500,8 @@ return cards
 }
 function summarize(course){const goals=points(course.objectives);const cards=steps(course.procedure);return {warnings:textWarnings(course),title:clean(course.name)||'未命名课程',subtitle:short(course.subtitle,100),focus:short(goals[0]||course.subtitle||course.name,100),intro:short(goals.slice(1,3).join('；')||course.subtitle,240),steps:cards.length?cards:[{title:'课堂流程待补充',body:'请在课程中填写教学流程后重新生成。'}],growth:goals.length?goals.slice(0,3).map(s=>short(s,100)):['课程目标待补充，请完善课程后重新生成。']}}
 function render(model,meta,createCanvas){
+meta=meta||{};
+const palette=Object.prototype.hasOwnProperty.call(styles,meta.style)?styles[meta.style]:styles.forest;
 const W=1000,pad=56,gap=20,col=(W-pad*2-gap)/2;
 const cv=createCanvas();cv.width=W;cv.height=1;let ctx=cv.getContext('2d');
 const font=FONT_FAMILY;
@@ -1445,18 +1521,19 @@ ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y
 }
 function round(x,y,w,h,r,color){roundedPath(x,y,w,h,r);ctx.fillStyle=color;ctx.fill()}
 function text(ls,x,y,size,color,bold,lineH){ctx.font=(bold?'bold ':'')+size+'px '+font;ctx.fillStyle=color;for(const line of ls){ctx.fillText(line,x,y);y+=lineH}return y}
-ctx.fillStyle='#e4eaea';ctx.fillRect(0,0,W,H);round(8,8,W-16,H-16,32,'#fffef5');
-ctx.save();roundedPath(8,8,W-16,H-16,32);ctx.clip();ctx.fillStyle='#194e51';ctx.fillRect(8,8,W-16,headerH);ctx.restore();
-let y=text(title,pad,48,44,'#ffffff',true,57);text(sub,pad,y+12,25,'#c9e1df',false,38);
-ctx.textAlign='right';text(['训练预告'],W-pad,52,25,'#d8c474',false,36);text([meta.code],W-pad,97,19,'#d0e2df',false,29);text(['生成于 '+meta.date],W-pad,128,18,'#d0e2df',false,28);ctx.textAlign='left';
-function section(n,label,y){text([n],pad,y+3,24,'#53777a',true,32);ctx.fillStyle='#c4af60';ctx.fillRect(pad,y+35,28,2);text([label],pad+48,y,30,'#193e43',true,42);return y+54}
-y=section('01','训练内容',headerH+44);y=text(focus,pad,y,26,'#255960',true,40);if(intro.length)y=text(intro,pad,y+18,24,'#41595b',false,39);
+ctx.fillStyle=palette.background;ctx.fillRect(0,0,W,H);round(8,8,W-16,H-16,32,palette.card);
+ctx.save();roundedPath(8,8,W-16,H-16,32);ctx.clip();ctx.fillStyle=palette.header;ctx.fillRect(8,8,W-16,headerH);ctx.restore();
+let y=text(title,pad,48,44,palette.headerTitle,true,57);text(sub,pad,y+12,25,palette.headerSubtitle,false,38);
+ctx.textAlign='right';text(['训练预告'],W-pad,52,25,palette.badge,false,36);text([meta.code],W-pad,97,19,palette.headerMeta,false,29);text(['生成于 '+meta.date],W-pad,128,18,palette.headerMeta,false,28);ctx.textAlign='left';
+function section(n,label,y){text([n],pad,y+3,24,palette.muted,true,32);ctx.fillStyle=palette.line;ctx.fillRect(pad,y+35,28,2);text([label],pad+48,y,30,palette.title,true,42);return y+54}
+y=section('01','训练内容',headerH+44);y=text(focus,pad,y,26,palette.accent,true,40);if(intro.length)y=text(intro,pad,y+18,24,palette.text,false,39);
 y=section('02','课堂流程',y+40);
-for(let row=0;row<rows.length;row++){for(let j=0;j<2;j++){const card=cards[row*2+j];if(!card)continue;const x=pad+j*(col+gap);round(x,y,col,rows[row],18,'#eef3ed');const yy=text(card.title,x+24,y+24,26,'#25555a',true,38);text(card.body,x+24,yy+12,23,'#496062',false,36)}y+=rows[row]+gap}
-y=section('03','成长收获',y+20);round(pad,y,W-pad*2,growthH,18,'#fcf3d6');let gy=y+24;for(const g of growth)gy=text(g,pad+28,gy,24,'#4a5b54',false,38)+12;
+for(let row=0;row<rows.length;row++){for(let j=0;j<2;j++){const card=cards[row*2+j];if(!card)continue;const x=pad+j*(col+gap);round(x,y,col,rows[row],18,palette.step);const yy=text(card.title,x+24,y+24,26,palette.stepTitle,true,38);text(card.body,x+24,yy+12,23,palette.subtitle,false,36)}y+=rows[row]+gap}
+y=section('03','成长收获',y+20);round(pad,y,W-pad*2,growthH,18,palette.growth);let gy=y+24;for(const g of growth)gy=text(g,pad+28,gy,24,palette.growthText,false,38)+12;
+drawWatermark(ctx,W,H,{dark:palette.dark,color:palette.watermark});
 return cv
 }
-return {summarize,steps,points,render,prepareFonts,fontFamily:FONT_FAMILY};
+return {summarize,steps,points,render,prepareFonts,styles,drawWatermark,fontFamily:FONT_FAMILY};
 });
 </script>
 <script src="school-knowledge.js"></script>
