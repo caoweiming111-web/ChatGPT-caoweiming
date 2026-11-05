@@ -21,6 +21,37 @@ const {chromium}=require('playwright');
  await page.locator('[onclick="generateImage()"]').click();await page.waitForFunction(()=>window.previewBlob);
  const clip=await page.evaluate(async()=>{const bitmap=await createImageBitmap(window.previewBlob);return {width:bitmap.width,height:bitmap.height,type:window.previewBlob.type}});
  assert.equal(clip.width,1000);assert.ok(clip.height>800);assert.equal(clip.type,'image/png');
+ // Reproduce the actual lesson that formerly collapsed all nested numbering into one card.
+ await page.locator('#training-preview-dialog header button').click();
+ await page.evaluate(()=>{
+ openDocument('explorer',8);
+ const original=CoursePreview.render;
+ window.fourCardModel=null;window.previewBlob=null;
+ window.restorePreviewRender=()=>{CoursePreview.render=original};
+ CoursePreview.render=function(model,...rest){window.fourCardModel=model;return original(model,...rest)};
+ });
+ await page.locator('[onclick="generateImage()"]').click();
+ await page.waitForFunction(()=>!previewImageState.busy&&window.previewBlob&&window.fourCardModel);
+ const lesson=await page.evaluate(async()=>{
+ const bitmap=await createImageBitmap(window.previewBlob);
+ const result={model:window.fourCardModel,width:bitmap.width,height:bitmap.height,png:Array.from(new Uint8Array(await window.previewBlob.arrayBuffer()))};
+ window.restorePreviewRender();delete window.restorePreviewRender;return result;
+ });
+ assert.match(lesson.model.title,/初步应用-3/);
+ assert.equal(lesson.model.steps.length,4);
+ const cardTexts=lesson.model.steps.map(card=>card.title+' '+card.body);
+ assert.match(cardTexts[0],/坐标/);
+ assert.match(cardTexts[1],/转化|转换|映射/);
+ assert.match(cardTexts[2],/对准|条件判断/);
+ assert.match(cardTexts[3],/优化|速度控制|取整|精准|居中/);
+ assert.doesNotMatch(cardTexts.join(' '),/待补充/);
+ assert.match(cardTexts.join(' '),/-99999/);
+ assert.match(cardTexts[0],/-99999 时，代表没有检测到目标物体/);
+ assert.match(cardTexts[3],/-5\s*~\s*5|取整|速度/);
+ assert.equal(lesson.width,1000);assert.ok(lesson.height>1000&&lesson.height<4000);
+ const fourCardsOut=process.env.PREVIEW_FOUR_CARDS_OUTPUT_PATH||path.join(root,'../artifacts/training-preview-four-cards.png');
+ await fs.mkdir(path.dirname(fourCardsOut),{recursive:true});await fs.writeFile(fourCardsOut,Buffer.from(lesson.png));
+ console.log('PASS real lesson 9 preview button extracts coordinates, mapping, automatic alignment and tuning into four cards; '+fourCardsOut);
  const all=await page.evaluate(()=>{
  const results=[];
  for(const cat of Object.keys(data))for(let i=0;i<data[cat].length;i++){
@@ -30,7 +61,7 @@ const {chromium}=require('playwright');
  const cv=CoursePreview.render(model,{code:cat+' · '+(i+1),date:'2026/11/04'},()=>document.createElement('canvas'));
  results.push({height:cv.height,cards:model.steps.length});
  }return results});
- assert.ok(all.length>=46);assert.ok(all.every(x=>x.height>600&&x.height<12000&&x.cards>=1&&x.cards<=4));
+ assert.ok(all.length>=46);assert.ok(all.every(x=>x.height>600&&x.height<12000&&x.cards===4));
  const preview=await page.evaluate(async()=>{const arr=new Uint8Array(await window.previewBlob.arrayBuffer());return Array.from(arr)});
  const out=process.env.PREVIEW_OUTPUT_PATH||path.join(os.tmpdir(),'makex-training-preview.png');await fs.writeFile(out,Buffer.from(preview));
  // Exercise download fallback even when clipboard permission is denied.

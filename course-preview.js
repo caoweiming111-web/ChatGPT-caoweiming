@@ -64,29 +64,62 @@ function cardTitle(s){return strip(s).replace(/^完成/,'').replace(/^在机器�
 function excerpt(s,limit){
 s=clean(s).replace(/^[^：:]{1,8}[：:]\s*/,'');
 const clauses=s.split(/[，,；;。]/).map(clean).filter(Boolean);let out='';
+// A condition without its consequence reverses the meaning of a useful summary.
+if(/^(?:当|如果|若)/.test(s)&&clauses.length>1){const complete=clauses.slice(0,2).join('，');if(complete.length<=limit*2)return complete}
 for(const clause of clauses){const next=out?out+'，'+clause:clause;if(next.length>limit){if(!out)out=short(clause,limit);break}out=next}
 return out
 }
 function cardBody(group,limit){
-const meaningful=group.body.filter(s=>s&&!/^[^：:]{1,8}[：:]$/.test(s));
-const chosen=meaningful.length>1?[meaningful[0],meaningful[meaningful.length-1]]:meaningful;
+const meaningful=group.body.map(strip).filter(s=>s&&!/^[^：:]{1,8}[：:]$/.test(s));
+// Retain the later subtopics too, especially tuning details within one long stage.
+const subtopics=group.body.filter(subheading).map(strip);
+const chosen=Array.from(new Set(meaningful.length>1?[meaningful[0],...subtopics,meaningful[meaningful.length-1]]:meaningful));
 return chosen.map(s=>excerpt(s,limit||34)).join('；')
 }
-function steps(text){
-const all=lines(text).filter(s=>! /^(课程基本流程|教学流程|课堂流程)[：:]?$/.test(s));
-const chinese=all.some(s=>/^[一二三四五六七八九十]+[、.．]/.test(s));
-const groups=[];let last=0;let nested=false;
-for(const s of all){const m=s.match(/^(\d{1,2})(?:[、)）]|[.．](?!\d))/);let heading=chinese?/^[一二三四五六七八九十]+[、.．]/.test(s):numbered(s);
-if(!chinese&&m){const num=Number(m[1]);if(num<=last)nested=true;if(nested)heading=false;else last=num}
-if(heading||!groups.length)groups.push({title:strip(s),body:[]});else groups[groups.length-1].body.push(strip(s));
+function headingStyle(s){
+if(/^[一二三四五六七八九十]+[、.．]/.test(s))return 'chinese';
+const m=s.match(/^\d{1,2}([、)）]|[.．](?!\d))/);
+if(m)return 'number'+m[1].replace('．','.').replace('）',')');
+if(/^[（(](?:\d{1,2}|[一二三四五六七八九十]+)[)）]/.test(s))return 'parenthesized';
+if(/^[①-⑳]/.test(s))return 'circled';
+return ''
 }
-if(groups.length===1&&!groups[0].body.length)return [{title:short(groups[0].title,32),body:''}];
+function subheading(s){return /^(?:#{1,6}\s+|[-*•●▪]\s+)/.test(s)&&Array.from(strip(s)).length<=40&&!/[。；！？]$/.test(s)}
+function splitStage(group){
+// Split at existing subheadings before considering ordinary sentences. Never cut
+// a numeric expression or manufacture a classroom activity to fill the layout.
+let body=group.body.slice();let boundary=body.findIndex((s,i)=>i>0&&subheading(s));
+if(boundary<0){const style=body.map(headingStyle).find(Boolean);if(style)boundary=body.findIndex((s,i)=>i>0&&headingStyle(s)===style)}
+if(boundary<0){
+body=body.flatMap(s=>s.split(/(?<=[。；！？])/u).map(clean).filter(Boolean));
+if(body.length>1)boundary=Math.floor(body.length/2);
+else if(body.length===1)boundary=0;
+else return null
+}
+return [{title:group.title,body:body.slice(0,boundary)},{title:strip(body[boundary]),body:body.slice(boundary+1)}]
+}
+function steps(text){
+const all=lines(text).filter(s=>! /^(课程基本流程|教学流程|课堂流程)[：:]?$/.test(s)&&strip(s));
+// Distinguish “1、” stages from “1.” substeps, so a numbering restart inside a
+// stage cannot swallow the later “2、” and “3、” stages.
+const style=all.some(s=>headingStyle(s)==='chinese')?'chinese':all.map(headingStyle).find(Boolean);
+const groups=[];
+for(const s of all){
+if((style&&headingStyle(s)===style)||!groups.length)groups.push({title:strip(s),body:[]});else groups[groups.length-1].body.push(s);
+}
+while(groups.length<4){
+const choices=groups.map((group,index)=>({index,parts:splitStage(group),weight:group.body.join('\n').length})).filter(choice=>choice.parts);
+if(!choices.length)break;
+choices.sort((a,b)=>b.weight-a.weight||a.index-b.index);
+const choice=choices[0];groups.splice(choice.index,1,...choice.parts)
+}
 // Keep the whole sequence represented; adjacent stages share a card for long lessons.
 const cards=[];const count=Math.min(4,groups.length);
-for(let i=0;i<count;i++){const from=Math.floor(i*groups.length/count),to=Math.floor((i+1)*groups.length/count);const chunk=groups.slice(from,to);cards.push({title:short(chunk.map(g=>cardTitle(g.title)).join(' · '),32),body:chunk.map(g=>cardBody(g,chunk.length>1?20:34)||g.title).join('；')})}
+for(let i=0;i<count;i++){const from=Math.floor(i*groups.length/count),to=Math.floor((i+1)*groups.length/count);const chunk=groups.slice(from,to);cards.push({title:short(chunk.map(g=>cardTitle(g.title)).join(' · '),32),body:chunk.map(g=>cardBody(g,chunk.length>1?20:34)||(chunk.length>1?g.title:'')).join('；')})}
+while(cards.length<4)cards.push({title:'课堂流程待补充',body:'课程中的流程内容不足，请补充后重新生成。'});
 return cards
 }
-function summarize(course){const goals=points(course.objectives);const cards=steps(course.procedure);return {warnings:textWarnings(course),title:clean(course.name)||'未命名课程',subtitle:short(course.subtitle,100),focus:short(goals[0]||course.subtitle||course.name,100),intro:short(goals.slice(1,3).join('；')||course.subtitle,240),steps:cards.length?cards:[{title:'课堂流程待补充',body:'请在课程中填写教学流程后重新生成。'}],growth:goals.length?goals.slice(0,3).map(s=>short(s,100)):['课程目标待补充，请完善课程后重新生成。']}}
+function summarize(course){const goals=points(course.objectives);return {warnings:textWarnings(course),title:clean(course.name)||'未命名课程',subtitle:short(course.subtitle,100),focus:short(goals[0]||course.subtitle||course.name,100),intro:short(goals.slice(1,3).join('；')||course.subtitle,240),steps:steps(course.procedure),growth:goals.length?goals.slice(0,3).map(s=>short(s,100)):['课程目标待补充，请完善课程后重新生成。']}}
 function render(model,meta,createCanvas){
 meta=meta||{};
 const palette=Object.prototype.hasOwnProperty.call(styles,meta.style)?styles[meta.style]:styles.forest;

@@ -9,15 +9,42 @@ test('preview extracts objectives and ordered stages without inventing outcomes'
 });
 test('Chinese top-level sections take precedence over numbered substeps',()=>{
  const result=steps('一、搭建\n1.安装电机\n2.安装轮子\n二、编程\n1.初始化\n2.前进');
- assert.equal(result.length,2);assert.equal(result[1].title,'编程');assert.match(result[1].body,/初始化/);
+ assert.equal(result.length,4);assert.equal(result[0].title,'搭建');assert.match(result[0].body,/安装电机/);
+ assert.equal(result[1].title,'安装轮子');assert.equal(result[2].title,'编程');assert.match(result[2].body,/初始化/);assert.equal(result[3].title,'前进');
 });
 test('long sequences include later stages and missing fields stay explicit',()=>{
  const result=steps(Array.from({length:8},(_,i)=>(i+1)+'、阶段'+(i+1)+'\n实践'+(i+1)).join('\n'));
  assert.equal(result.length,4);assert.match(result[3].title,/阶段8/);
- const empty=summarize({});assert.match(empty.growth[0],/待补充/);assert.match(empty.steps[0].title,/待补充/);
+ const empty=summarize({});assert.match(empty.growth[0],/待补充/);assert.equal(empty.steps.length,4);assert.ok(empty.steps.every(s=>/待补充/.test(s.title)));
 });
 test('decimal quantities are not mistaken for numbered lesson stages',()=>{
- assert.equal(steps('1、装配\n1.5A 舵机\n2、调试').length,2);
+ const result=steps('1、装配\n1.5A 舵机\n2、调试\n检查 0.5 的参数\n3、观察结果\n4、记录结果');
+ assert.equal(result.length,4);assert.equal(result[0].title,'装配');assert.equal(result[0].body,'1.5A 舵机');assert.equal(result[1].title,'调试');
+});
+
+test('mixed numbered substeps cannot hide later stages and tuning fills the fourth card',()=>{
+ const procedure='1、了解AI Camera的坐标\n- 核心功能：获取目标标签的坐标\n1.画面坐标体系\n1.1 屏幕分辨率为640×480\n2.特殊值含义\n当坐标为 -99999 时代表没有检测到目标物体\n2、学习X坐标0~640到-100~100的转换\n- 核心原理：线性映射\n1.将0~640减320\n2.将结果除以3.2\n3、使用AI Camera自动对准AprilTag\n- 使用条件判断\n1.未识别时停止电机\n2.根据坐标左右转向\n3.居中时停止\n- 坐标运算与速度控制\n1.设置速度限制\n- 向下取整防0偏\n1.对转换后的X坐标向下取整\n- 增加-5~5精准居中范围\n1.进入区间立即停止电机';
+ const source={name:'AI Camera初步应用-3',procedure},before=JSON.stringify(source),model=summarize(source);
+ assert.equal(model.steps.length,4);assert.equal(model.steps[0].title,'了解AI Camera的坐标');
+ assert.match(model.steps[0].body,/-99999/);assert.match(model.steps[1].title,/0~640到-100~100/);
+ assert.match(model.steps[2].title,/自动对准AprilTag/);assert.equal(model.steps[3].title,'坐标运算与速度控制');
+ assert.match(model.steps[3].body,/取整/);assert.match(model.steps[3].body,/-5~5/);
+ assert.doesNotMatch(JSON.stringify(model.steps),/待补充/);assert.equal(JSON.stringify(source),before);
+});
+test('a single stage can yield four points from its detailed original sentences',()=>{
+ const result=steps('1、课堂实践\n连接摄像头。采集标签画面。读取目标坐标。记录识别结果。');
+ assert.equal(result.length,4);assert.doesNotMatch(JSON.stringify(result),/待补充/);
+ for(const point of ['连接摄像头','采集标签画面','读取目标坐标','记录识别结果'])assert.ok(result.some(s=>(s.title+s.body).includes(point)));
+});
+test('summaries keep the meaning after a long coordinate condition',()=>{
+ const result=steps('1、认识坐标\n当报告的 X、Y 坐标、长度、宽度的值为 -99999 时，代表没有检测到目标物体。\n2、坐标转换\n3、自动对准\n4、参数优化');
+ assert.match(result[0].body,/-99999 时，代表没有检测到目标物体/);
+});
+test('short or missing procedures explicitly pad four cards without inventing activities',()=>{
+ for(const procedure of ['', '1、认识坐标', '1、认识坐标\n2、编程', '1、认识坐标\n2、编程\n3、观察']){
+  const result=steps(procedure);assert.equal(result.length,4);assert.match(result[3].title,/待补充/);
+  for(const card of result)if(!/待补充/.test(card.title))assert.ok(procedure.includes(card.title));
+ }
 });
 
 test('numeric content after a Chinese list separator remains an objective',()=>{
@@ -28,8 +55,8 @@ test('numeric content after a Chinese list separator remains an objective',()=>{
 test('preview strips corrupt characters and circled list markers, keeping real objectives',()=>{
  const model=summarize({name:'AI Camera 视觉巡线',subtitle:'路径\u200b识别',objectives:'知识目标\n① 理解 AI 视觉巡线的原理，掌握完整\ufffd\ufffd流程\n② 能够区分视觉巡线和红外单\ufffd\ufffd巡线的差异\n技能目标\n③ 能够编写 P 巡线程序',procedure:'① 讲解视觉巡线\n清理\ufffd\ufffd干扰物\n② 编写巡线程序\n排除 -99999 的情况'});
  assert.equal(model.focus,'理解 AI 视觉巡线的原理，掌握完整流程');
- assert.equal(model.growth.length,3);assert.equal(model.steps.length,2);
- assert.ok(model.steps[1].body.includes('-99999'));
+ assert.equal(model.growth.length,3);assert.equal(model.steps.length,4);
+ assert.ok(model.steps.some(s=>(s.title+s.body).includes('-99999')));
  assert.doesNotMatch(JSON.stringify(model),/[\ufffd\u200b①②③]/);
  assert.ok(!model.growth.includes('知识目标'));
 });

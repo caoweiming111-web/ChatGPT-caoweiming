@@ -72,7 +72,7 @@ test('all existing lessons can be analyzed without modifying the original course
     assert.ok(Array.isArray(result.entries));
     count++;
   }
-  assert.equal(count, 52);
+  assert.ok(count > 0, 'analyze the current course collection as lessons are added');
   assert.equal(JSON.stringify(data), before);
 });
 test('the page keeps valid inline scripts and loads the knowledge module once', () => {
