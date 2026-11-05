@@ -130,3 +130,10 @@ ode server.js
 - `.makex-github` 为本机受管同步目录，请保留；不要手动重置／删除来绕过冲突。未知同名目录不会被接管。
 
 同步前端与预告组件均内置在 `index.html`。修改任意运行模块后执行 `node scripts/sync-course-preview.js`；`npm test` 验证嵌入一致性、ZIP 真实 Git／HTTP 流程、冲突和备份保护。`node scripts/test-git-sync-client-browser.js` 验证浏览器提示与首次确认。此环境验证了 Node／Git 的真实临时仓库操作和浏览器交互，未在你的 Windows 电脑上执行安装、登录或批处理。
+
+
+### 当前目录连接了其他仓库
+
+如果同步弹窗提示“项目连接的仓库不是 ChatGPT-caoweiming”，说明运行目录的 Git 地址／分支配置与目标不一致，课程不会因此丢失。先下载当前课程 JSON 备份，再点击“连接到 ChatGPT-caoweiming”。该操作在独立同步目录连接固定目标仓库，不会更改原仓库的 origin、分支、提交或暂存区；本机与 GitHub 的课程不同时仍须核对后明确确认上传。
+
+连接成功后会记住选择，后续直接点“同步 GitHub”即可。此修复需要更新完整程序，并关闭旧服务器后重新启动。不能仅替换 HTML，也不要为了上传而删除原来的 `.git` 文件夹。

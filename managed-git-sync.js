@@ -30,8 +30,22 @@ function parseCourses(contents) {
   return courses;
 }
 function cacheConflict() { return new SyncError('SYNC_CACHE_CONFLICT', '.makex-github 文件夹已有无法识别的内容，同步已停止。请先备份并移走该文件夹后重试；程序不会删除其中的文件。'); }
+function validMarker(marker) {
+  return marker && marker.version === 1 && marker.repository === REPOSITORY && typeof marker.initialized === 'boolean';
+}
+async function hasExplicitConnection(cwd) {
+  const cache = path.join(cwd, CACHE);
+  for (const directory of [cache, path.join(cache, '.git')]) {
+    const stat = await fs.lstat(directory).catch(() => null);
+    if (!stat || !stat.isDirectory() || stat.isSymbolicLink()) return false;
+  }
+  try {
+    const marker = JSON.parse(await fs.readFile(path.join(cache, '.git', MARKER), 'utf8'));
+    return Boolean(validMarker(marker) && marker.sourceConnection === 'explicit');
+  } catch { return false; }
+}
 
-async function managedRepository(cwd) {
+async function managedRepository(cwd, explicitConnection) {
   const cache = path.join(cwd, CACHE);
   if (!await exists(cache)) {
     // Clone in a private temporary directory. Only directories created by this
@@ -51,27 +65,38 @@ async function managedRepository(cwd) {
   if (!gitStat || !gitStat.isDirectory() || gitStat.isSymbolicLink()) throw cacheConflict();
   let marker;
   try { marker = JSON.parse(await fs.readFile(path.join(gitDir, MARKER), 'utf8')); } catch { throw cacheConflict(); }
-  if (marker.version !== 1 || marker.repository !== REPOSITORY || typeof marker.initialized !== 'boolean') throw cacheConflict();
+  if (!validMarker(marker)) throw cacheConflict();
   const root = await git(cache, ['rev-parse', '--show-toplevel']);
   if (await fs.realpath(root) !== await fs.realpath(cache)) throw cacheConflict();
   const origin = (await git(cache, ['config', '--get-all', 'remote.origin.url'])).split('\n').filter(Boolean);
   if (origin.length !== 1 || !correctRemote(origin[0])) throw new SyncError('WRONG_REMOTE', '受管同步仓库的 origin 地址不正确；同步已停止，不会改写该地址。');
-  return { cache, marker, markerPath: path.join(gitDir, MARKER) };
+  const markerPath = path.join(gitDir, MARKER);
+  // Only the explicit connect action may select this independent repository
+  // for future clicks. It does not authorize replacing remote course data.
+  if (explicitConnection && marker.sourceConnection !== 'explicit') {
+    marker = { ...marker, sourceConnection: 'explicit' };
+    await atomicSave(markerPath, marker);
+  }
+  return { cache, marker, markerPath };
 }
 
-async function syncLocalCourses({ cwd = __dirname, beforeSync, confirmedRemoteCommit } = {}) {
+async function syncLocalCourses({ cwd = __dirname, beforeSync, confirmedRemoteCommit, useManagedRepository = false } = {}) {
+  const explicitConnection = useManagedRepository === true;
+  const useManaged = explicitConnection || await hasExplicitConnection(cwd);
   // A linked worktree has a .git *file*. It is still a real repository and
-  // must retain all existing branch, origin, index and history protections.
-  if (await exists(path.join(cwd, '.git'))) return syncCourses({ cwd, beforeSync });
-  let executable;
-  try { executable = await findGitExecutable(); } catch (error) { if (error.code !== 'NO_GIT') throw error; }
-  try {
-    if (executable) {
-      await execute(executable, ['rev-parse', '--show-toplevel'], { cwd, env: createGitEnv(), windowsHide: true });
-      return syncCourses({ cwd, beforeSync });
+  // retains its existing safeguards unless a separate connection was chosen.
+  if (!useManaged) {
+    if (await exists(path.join(cwd, '.git'))) return syncCourses({ cwd, beforeSync });
+    let executable;
+    try { executable = await findGitExecutable(); } catch (error) { if (error.code !== 'NO_GIT') throw error; }
+    try {
+      if (executable) {
+        await execute(executable, ['rev-parse', '--show-toplevel'], { cwd, env: createGitEnv(), windowsHide: true });
+        return syncCourses({ cwd, beforeSync });
+      }
+    } catch (error) {
+      if (!/not a git repository/i.test(String(error.stderr || ''))) throw classifyGitError(error, 'rev-parse');
     }
-  } catch (error) {
-    if (!/not a git repository/i.test(String(error.stderr || ''))) throw classifyGitError(error, 'rev-parse');
   }
   const lockPath = path.join(cwd, CACHE + '.lock');
   let lock;
@@ -83,7 +108,7 @@ async function syncLocalCourses({ cwd = __dirname, beforeSync, confirmedRemoteCo
     let cacheContents = contents;
     const courses = parseCourses(contents);
     await git(cwd, ['--version']);
-    const { cache, marker, markerPath } = await managedRepository(cwd);
+    const { cache, marker, markerPath } = await managedRepository(cwd, explicitConnection);
     if (!marker.initialized) {
       await git(cache, ['fetch', '--no-tags', 'origin', 'refs/heads/main']);
       const remoteCommit = await git(cache, ['rev-parse', 'FETCH_HEAD']);

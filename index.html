@@ -1578,11 +1578,11 @@ function ensureFeedback() {
   document.head.appendChild(style);
   const dialog = document.createElement('dialog');
   dialog.id = 'git-sync-dialog'; dialog.setAttribute('aria-labelledby', 'git-sync-title');
-  dialog.innerHTML = '<h2 id="git-sync-title"></h2><p id="git-sync-message" role="status" aria-live="polite"></p><p id="git-sync-location" hidden style="font-size:12px;opacity:.75"></p><div id="git-sync-setup" hidden></div><details id="git-sync-details" hidden><summary>技术信息</summary><pre id="git-sync-error"></pre></details><footer><button type="button" id="git-sync-confirm" hidden>确认使用本机课程并上传</button><button type="button" id="git-sync-backup">下载当前课程备份 JSON</button><button type="button" id="git-sync-close">关闭</button></footer>';
+  dialog.innerHTML = '<h2 id="git-sync-title"></h2><p id="git-sync-message" role="status" aria-live="polite"></p><p id="git-sync-location" hidden style="font-size:12px;opacity:.75"></p><div id="git-sync-target" hidden><p>目标仓库：<a href="https://github.com/caoweiming111-web/ChatGPT-caoweiming" target="_blank" rel="noopener noreferrer" style="color:var(--cyan,#76e1ef)">caoweiming111-web/ChatGPT-caoweiming</a></p><p>使用独立同步目录，保留原仓库配置；之后核对本机与 GitHub 课程再确认上传。</p></div><div id="git-sync-setup" hidden></div><details id="git-sync-details" hidden><summary>技术信息</summary><pre id="git-sync-error"></pre></details><footer><button type="button" id="git-sync-connect" hidden>连接到 ChatGPT-caoweiming</button><button type="button" id="git-sync-confirm" hidden>确认使用本机课程并上传</button><button type="button" id="git-sync-backup">下载当前课程备份 JSON</button><button type="button" id="git-sync-close">关闭</button></footer>';
   const reopen = document.createElement('button');
   reopen.type = 'button'; reopen.id = 'git-sync-open-status'; reopen.textContent = '查看 GitHub 同步状态'; reopen.hidden = true;
   document.body.append(dialog, reopen);
-  feedback = { dialog, reopen, title: dialog.querySelector('h2'), message: dialog.querySelector('#git-sync-message'), location: dialog.querySelector('#git-sync-location'), setup: dialog.querySelector('#git-sync-setup'), details: dialog.querySelector('details'), error: dialog.querySelector('pre'), confirm: dialog.querySelector('#git-sync-confirm'), close: dialog.querySelector('#git-sync-close') };
+  feedback = { dialog, reopen, title: dialog.querySelector('h2'), message: dialog.querySelector('#git-sync-message'), location: dialog.querySelector('#git-sync-location'), target: dialog.querySelector('#git-sync-target'), connect: dialog.querySelector('#git-sync-connect'), setup: dialog.querySelector('#git-sync-setup'), details: dialog.querySelector('details'), error: dialog.querySelector('pre'), confirm: dialog.querySelector('#git-sync-confirm'), close: dialog.querySelector('#git-sync-close') };
   function open() { reopen.hidden = true; if (!dialog.open) { if (dialog.showModal) dialog.showModal(); else dialog.setAttribute('open', ''); } }
   function close() { if (dialog.close) dialog.close(); else { dialog.removeAttribute('open'); closed(); } }
   function closed() {
@@ -1596,6 +1596,7 @@ function ensureFeedback() {
     if (!confirmation) return;
     const resolve = confirmation; confirmation = null; feedback.confirm.hidden = true; resolve(true);
   });
+  feedback.connect.addEventListener('click', () => { root.syncToGitHub({ useManagedRepository: true }); });
   dialog.querySelector('#git-sync-backup').addEventListener('click', () => {
     try { downloadBackup(); if (root.showToast) root.showToast('已开始下载课程备份 JSON'); }
     catch { feedback.message.textContent += '\n备份未能下载，请保持页面打开并重新尝试。'; }
@@ -1609,6 +1610,7 @@ function display(title, message, options = {}) {
   ui.message.style.color = options.error ? '#efbd73' : '';
   ui.details.hidden = !options.details; ui.error.textContent = options.details || '';
   ui.setup.hidden = true; ui.confirm.hidden = true;
+  ui.target.hidden = !options.connect; ui.connect.hidden = !options.connect;
   ui.close.textContent = options.pending ? '收起，继续编辑' : '关闭';
   show(message, options.error);
   if (options.open) ui.open();
@@ -1635,9 +1637,9 @@ function advice(error) {
     NETWORK_ERROR: '请检查电脑能否打开 github.com，然后重试。',
     FETCH_FAILED: '请检查 GitHub 网络连接及启动窗口中的登录提示，再重试。',
     PUSH_FAILED: '请检查 GitHub 网络连接、账号写入权限及启动窗口中的登录提示，再重试。',
-    WRONG_ROOT: '请从本程序所在文件夹运行“启动MakeX.bat”，不要使用其他目录中已启动的旧服务。',
-    WRONG_REMOTE: '项目连接的仓库不是 ChatGPT-caoweiming。请使用该仓库的最新版下载包，并重新启动。',
-    WRONG_BRANCH: '项目需要使用 main 分支。请先在 Git 中切换到 main，或使用 main 分支的最新版下载包。',
+    WRONG_ROOT: '当前程序目录不是仓库的根目录，本次尚未上传课程。请点击下方“连接到 ChatGPT-caoweiming”，为课程使用独立同步目录。',
+    WRONG_REMOTE: '当前目录连接的是另一个 GitHub 仓库，本次尚未上传课程。请点击下方“连接到 ChatGPT-caoweiming”继续。',
+    WRONG_BRANCH: '当前目录所在的分支不是 main，本次尚未上传课程。请点击下方“连接到 ChatGPT-caoweiming”，为课程使用独立同步目录。',
     STAGED_CHANGES: 'Git 中还有已暂存的修改，请先处理这些修改，再上传课程。',
     GIT_IN_PROGRESS: 'Git 中还有未结束的合并或其他操作，请先在 Git 中完成，再重试。',
     BUSY: '另一次同步正在进行，请等待它结束后重试。',
@@ -1677,7 +1679,7 @@ async function checkLocalServer() {
     catch { throw syncError('LOCAL_SERVER_UNAVAILABLE', '未连接到本地同步服务'); }
     let result;
     try { result = await response.json(); } catch {}
-    if (!response.ok || !result || result.ok !== true || result.version !== '2026-11-04.sync2') {
+    if (!response.ok || !result || result.ok !== true || result.version !== '2026-11-05.sync3') {
       throw syncError('SERVER_OUTDATED', '运行中的本地服务器不支持此版本的同步功能');
     }
     const ui = ensureFeedback();
@@ -1685,12 +1687,13 @@ async function checkLocalServer() {
     ui.location.hidden = !ui.location.textContent;
   } finally { clearTimeout(timer); }
 }
-async function sendSnapshot(snapshot, confirmedCommit) {
+async function sendSnapshot(snapshot, confirmedCommit, useManagedRepository) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 240000);
   try {
     const headers = { 'Content-Type': 'application/json', 'X-MakeX-Sync': '1' };
     if (confirmedCommit) headers['X-MakeX-Confirm-Setup'] = confirmedCommit;
+    if (useManagedRepository) headers['X-MakeX-Use-Managed'] = '1';
     let response;
     try {
       response = await fetch(location.protocol === 'file:' ? 'http://localhost:3456/git-sync' : '/git-sync', {
@@ -1759,7 +1762,8 @@ root.loadProjectCourses = async () => {
     show('已读取项目文件，原浏览器课程已下载备份。');
   } catch { show('读取未完成，浏览器课程仍保留。请确认本地服务器正在运行。', true); }
 };
-root.syncToGitHub = async () => {
+root.syncToGitHub = async options => {
+  const useManagedRepository = !!options && options.useManagedRepository === true;
   if (root.gitSyncInProgress) { ensureFeedback().open(); return; }
   if (root.CourseImages && root.CourseImages.isBusy()) {
     display('图片尚未处理完成', advice({ code: 'BUSY_IMAGES' }), { error: true, open: true, details: 'BUSY_IMAGES' }); return;
@@ -1774,7 +1778,7 @@ root.syncToGitHub = async () => {
     await waitForSavedQueue();
     await checkLocalServer();
     display('正在同步 GitHub', '正在连接 GitHub 并上传课程，首次连接可能需要一些时间。\n如果启动窗口提示 GitHub 登录，请在该窗口中完成。', { pending: true });
-    let result = await sendSnapshot(snapshot);
+    let result = await sendSnapshot(snapshot, undefined, useManagedRepository);
     while (result.code === 'SYNC_SETUP_REQUIRED') {
       if (!await confirmSetup(result, snapshot)) {
         markPending(true);
@@ -1782,7 +1786,7 @@ root.syncToGitHub = async () => {
       }
       const confirmedCommit = result.setup.remoteCommit;
       display('正在同步 GitHub', '已确认使用本机课程，正在上传 GitHub，请稍候…', { pending: true });
-      result = await sendSnapshot(snapshot, confirmedCommit);
+      result = await sendSnapshot(snapshot, confirmedCommit, useManagedRepository);
     }
     root.courseDataConflict = false;
     document.getElementById('load-project-courses').hidden = true;
@@ -1792,7 +1796,7 @@ root.syncToGitHub = async () => {
     markPending(changed || saveFailed);
     const commit = typeof result.commit === 'string' ? ' · ' + result.commit.slice(0, 7) : '';
     const message = (result.upToDate ? '课程已与 GitHub 一致' : '课程已上传 GitHub') + commit + '。' +
-      (result.managedRepository ? '\n已为此下载包配置同步目录，今后可直接点击“同步 GitHub”。' : '') +
+      (result.managedRepository ? '\n已通过独立同步目录连接 ChatGPT-caoweiming，今后可直接点击“同步 GitHub”。' : '') +
       (changed ? '\n同步期间的新修改仍保留，待下次上传。' : '') +
       (saveFailed ? '\n当前编辑内容的浏览器保存未完成，请下载课程备份。' : '') +
       (result.updatedCode ? '\n程序有更新，请重启本地服务并刷新页面。' : '') +
@@ -1803,7 +1807,8 @@ root.syncToGitHub = async () => {
     markPending(true);
     const uncertain = error.code === 'RESULT_UNCONFIRMED';
     display(uncertain ? '同步结果尚未确认' : 'GitHub 同步未完成', advice(error), {
-      error: true, details: (error.code || 'SYNC_FAILED') + '\n' + error.message + (error.backup ? '\n项目文件备份：' + error.backup : '')
+      error: true, connect: ['WRONG_REMOTE', 'WRONG_ROOT', 'WRONG_BRANCH'].includes(error.code),
+      details: (error.code || 'SYNC_FAILED') + '\n' + error.message + (error.backup ? '\n项目文件备份：' + error.backup : '')
     });
     if (!ensureFeedback().dialog.open) ensureFeedback().open();
   } finally {

@@ -10,7 +10,7 @@ const PPT_ROOT = 'E:/ppt';
 const DATA_FILE = path.join(DIR, 'makex_data.json');
 const { validCourses, atomicSave } = require('./sync-courses');
 const { syncLocalCourses } = require('./managed-git-sync');
-const SYNC_SERVER_VERSION = '2026-11-04.sync2';
+const SYNC_SERVER_VERSION = '2026-11-05.sync3';
 let courseSyncBusy = false;
 let dataWriteQueue = Promise.resolve();
 
@@ -54,7 +54,7 @@ const sv = http.createServer(function (req, res) {
     res.setHeader('Cache-Control', 'no-store');
     if (req.method === 'OPTIONS') {
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,X-MakeX-Sync,X-MakeX-Confirm-Setup');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,X-MakeX-Sync,X-MakeX-Confirm-Setup,X-MakeX-Use-Managed');
       res.writeHead(204); res.end(); return;
     }
     const reply = (status, value) => { res.writeHead(status, { 'Content-Type': 'application/json;charset=utf-8' }); res.end(JSON.stringify(value)); };
@@ -94,7 +94,7 @@ const sv = http.createServer(function (req, res) {
           incomingSaved = true;
         };
         let result;
-        try { result = await syncLocalCourses({ cwd: DIR, beforeSync: saveIncoming, confirmedRemoteCommit: req.headers['x-makex-confirm-setup'] }); }
+        try { result = await syncLocalCourses({ cwd: DIR, beforeSync: saveIncoming, confirmedRemoteCommit: req.headers['x-makex-confirm-setup'], useManagedRepository: req.headers['x-makex-use-managed'] === '1' }); }
         catch (error) {
           // ZIP users can still save lessons even before setting up Git.
           if (!incomingSaved && (error.code === 'NO_REPOSITORY' || error.code === 'NO_GIT')) await saveIncoming();

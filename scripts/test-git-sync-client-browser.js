@@ -14,7 +14,7 @@ const fixture = `<!doctype html><html><head><meta charset="utf-8"></head><body s
 window.data = {inspire:[],explorer:[{name:'旧课程',objectives:'旧目标',procedure:'旧步骤',extra:'保留字段'}],explorer2:[],challenge:[]};
 window.docContext={cat:'explorer',index:0};window.localSavePending=true;window.courseDataConflict=false;
 window.nativeSetTimeout=window.setTimeout;window.setTimeout=(callback,delay,...args)=>nativeSetTimeout(callback,window.fastTimers&&(delay===15000||delay===240000)?40:delay,...args);
-window.serverSaveQueue=Promise.resolve();window.toasts=[];window.requests=[];window.fetchMode='success';window.statusMode='current';
+window.serverSaveQueue=Promise.resolve();window.toasts=[];window.requests=[];window.fetchMode='success';window.statusMode='current';window.managedConnected=false;
 window.saveData=()=>{if(window.saveFails)throw Error('quota');localStorage.setItem('makex_data',JSON.stringify(data));localSavePending=true;};
 window.saveDocumentData=()=>{if(window.saveFails)throw Error('quota');const c=data.explorer[0];['name','subtitle','equipment','objectives','procedure'].forEach(k=>{const e=document.getElementById('doc-'+k);c[k]=k==='objectives'||k==='procedure'?e.innerHTML:e.value;});saveData();};
 window.showToast=message=>toasts.push(message);window.tr=()=> '同步 GitHub';window.updateCounts=()=>{};
@@ -24,7 +24,17 @@ window.fetch=async(url,options={})=>{
   if(url.endsWith('/git-sync/status')){
     if(statusMode==='offline')throw TypeError('Failed to fetch');
     if(statusMode==='old')return new Response('<html>old server</html>');
-    return response({ok:true,version:'2026-11-04.sync2',directory:'C:\\课程文件夹'});
+    if(statusMode==='previous')return response({ok:true,version:'2026-11-04.sync2'});
+    return response({ok:true,version:'2026-11-05.sync3',directory:'C:\\课程文件夹'});
+  }
+  if(fetchMode.startsWith('wrong-')){
+    const code=fetchMode==='wrong-root'?'WRONG_ROOT':fetchMode==='wrong-branch'?'WRONG_BRANCH':'WRONG_REMOTE';
+    if(!options.headers['X-MakeX-Use-Managed']&&!managedConnected)return response({code,error:'Current Git configuration does not match'},409);
+    if(!managedConnected){
+      const confirmed=options.headers['X-MakeX-Confirm-Setup'];
+      if(!confirmed||fetchMode==='wrong-remote-changed'&&confirmed==='a'.repeat(40))return response({code:'SYNC_SETUP_REQUIRED',setup:{remoteCommit:confirmed?'b'.repeat(40):'a'.repeat(40),localCounts:{explorer:37},remoteCounts:{explorer:36}}},409);
+      managedConnected=true;
+    }
   }
   if(fetchMode==='auth')return response({ok:false,code:'GITHUB_AUTH_REQUIRED',error:'Git authentication failed',backup:'.makex-backups/example.json'},500);
   if(fetchMode==='invalid')return new Response('<html>old</html>');
@@ -112,7 +122,61 @@ async function main() {
     assert.match(await message.textContent(), /尚未上传/);
     console.log('PASS changed remote requires a new confirmation; cancel does not upload');
 
+    for(const mode of ['wrong-remote','wrong-root','wrong-branch']){
+      await fresh(mode);await page.evaluate(()=>{courseDataConflict=true;document.getElementById('load-project-courses').hidden=false;});
+      if(mode==='wrong-remote')await page.evaluate(()=>{window.syncJob=syncToGitHub(new Event('click'));});
+      else if(mode==='wrong-root')await page.evaluate(()=>{window.syncJob=syncToGitHub({useManagedRepository:'true'});});
+      else await start();
+      await done();
+      assert.equal(await page.locator('#git-sync-connect').isVisible(),true);
+      assert.equal(await page.locator('#git-sync-target a').getAttribute('href'),'https://github.com/caoweiming111-web/ChatGPT-caoweiming');
+      assert.match(await page.locator('#git-sync-target').textContent(),/使用独立同步目录，保留原仓库配置/);
+      assert.match(await message.textContent(),/连接到 ChatGPT-caoweiming/);
+      const failedPosts=await page.evaluate(()=>requests.filter(r=>r.url==='/git-sync'));
+      assert.equal(failedPosts.length,1);assert.equal(failedPosts[0].headers['X-MakeX-Use-Managed'],undefined);
+      assert.equal(await page.evaluate(()=>localSavePending&&courseDataConflict&&data.explorer[0].extra==='保留字段'),true);
+    }
+    console.log('PASS wrong Git configuration offers an explicit connection button without automatic retry; Event/string options cannot opt in');
+
+    await fresh('wrong-remote-changed');await page.evaluate(()=>{courseDataConflict=true;document.getElementById('load-project-courses').hidden=false;});await start();await done();
+    await page.evaluate(()=>document.getElementById('doc-name').value='点击连接前的新修改');
+    await page.locator('#git-sync-connect').click();await page.locator('#git-sync-confirm').waitFor({state:'visible'});
+    let managedPosts=await page.evaluate(()=>requests.filter(r=>r.url==='/git-sync'));
+    assert.equal(managedPosts.length,2);assert.equal(managedPosts[1].headers['X-MakeX-Use-Managed'],'1');
+    assert.equal(JSON.parse(managedPosts[1].body).explorer[0].name,'点击连接前的新修改');
+    assert.equal(await page.evaluate(()=>courseDataConflict),true);
+    await page.evaluate(()=>document.getElementById('doc-name').value='连接确认期间的新修改');
+    await page.locator('#git-sync-confirm').click();
+    await page.waitForFunction(()=>document.getElementById('git-sync-error').textContent.includes('b'.repeat(40)));
+    managedPosts=await page.evaluate(()=>requests.filter(r=>r.url==='/git-sync'));
+    assert.equal(managedPosts.length,3);assert.equal(managedPosts[2].headers['X-MakeX-Use-Managed'],'1');
+    assert.equal(managedPosts[2].headers['X-MakeX-Confirm-Setup'],'a'.repeat(40));assert.equal(managedPosts[2].body,managedPosts[1].body);
+    assert.equal(await page.locator('#git-sync-confirm').isVisible(),true);
+    assert.equal(await page.evaluate(()=>courseDataConflict),true);
+    await page.locator('#git-sync-confirm').click();await page.waitForFunction(()=>!gitSyncInProgress);
+    managedPosts=await page.evaluate(()=>requests.filter(r=>r.url==='/git-sync'));
+    assert.equal(managedPosts.length,4);assert.equal(managedPosts[3].headers['X-MakeX-Use-Managed'],'1');
+    assert.equal(managedPosts[3].headers['X-MakeX-Confirm-Setup'],'b'.repeat(40));assert.equal(managedPosts[3].body,managedPosts[1].body);
+    assert.match(await message.textContent(),/已上传 GitHub.*abcdef1/);assert.match(await message.textContent(),/已通过独立同步目录连接/);
+    assert.equal(await page.locator('#git-sync-connect').isHidden(),true);
+    assert.equal(await page.evaluate(()=>!courseDataConflict&&localSavePending&&data.explorer[0].name==='连接确认期间的新修改'),true);
+    await start();await done();
+    managedPosts=await page.evaluate(()=>requests.filter(r=>r.url==='/git-sync'));
+    assert.equal(managedPosts.length,5);assert.equal(managedPosts[4].headers['X-MakeX-Use-Managed'],undefined);
+    assert.equal(await page.evaluate(()=>localSavePending),false);
+    console.log('PASS explicit managed connection and all setup retries preserve opt-in/snapshot; remote change requires a fresh click; later sync uses saved backend choice');
+
+    await fresh('wrong-remote');await start();await done();await page.locator('#git-sync-connect').click();await page.locator('#git-sync-confirm').waitFor({state:'visible'});
+    await page.locator('#git-sync-close').click();await page.waitForFunction(()=>!gitSyncInProgress);
+    assert.equal(await page.evaluate(()=>requests.filter(r=>r.url==='/git-sync').length),2);
+    assert.equal(await page.evaluate(()=>localSavePending&&!managedConnected),true);
+    assert.match(await message.textContent(),/尚未上传/);
+    console.log('PASS cancelling course confirmation after managed connection never uploads the courses');
+
     await fresh();await page.evaluate(()=>statusMode='old');await start();await done();
+    assert.match(await message.textContent(),/本地服务器仍是旧版/);
+    assert.equal(await page.evaluate(()=>requests.some(r=>r.url==='/git-sync')),false);
+    await fresh();await page.evaluate(()=>statusMode='previous');await start();await done();
     assert.match(await message.textContent(),/本地服务器仍是旧版/);
     assert.equal(await page.evaluate(()=>requests.some(r=>r.url==='/git-sync')),false);
     await fresh();await page.evaluate(()=>statusMode='offline');await start();await done();

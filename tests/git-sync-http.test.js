@@ -35,7 +35,7 @@ test('local-only Git HTTP endpoint saves, backs up and uploads actual course pay
   await t.test('local status identifies the running version and never exposes it to foreign origins', async () => {
     const response = await fetch('http://127.0.0.1:' + port + '/git-sync/status');
     const status = await response.json();
-    assert.equal(status.version, '2026-11-04.sync2'); assert.equal(status.directory, app); assert.equal(status.repositoryPresent, true);
+    assert.equal(status.version, '2026-11-05.sync3'); assert.equal(status.directory, app); assert.equal(status.repositoryPresent, true);
     assert.equal((await fetch('http://127.0.0.1:' + port + '/git-sync/status', { headers: { Origin: 'https://evil.example' } })).status, 403);
   });
   await t.test('rejects foreign websites, missing action header and rebinding hosts', async () => {
@@ -44,7 +44,7 @@ test('local-only Git HTTP endpoint saves, backs up and uploads actual course pay
       assert.equal((await request(port, { body: JSON.stringify(original), headers })).status, 403);
     }
     assert.equal((await request(port, { method: 'OPTIONS', headers: { Origin: 'https://evil.example' } })).status, 403);
-    const allowed = await request(port, { method: 'OPTIONS', headers: { Origin: 'null' } }); assert.equal(allowed.status, 204); assert.equal(allowed.headers['access-control-allow-origin'], 'null');
+    const allowed = await request(port, { method: 'OPTIONS', headers: { Origin: 'null' } }); assert.equal(allowed.status, 204); assert.equal(allowed.headers['access-control-allow-origin'], 'null'); assert.match(allowed.headers['access-control-allow-headers'], /X-MakeX-Use-Managed/);
     assert.equal(await git(remote, 'rev-parse', 'main'), before);
   });
   await t.test('rejects invalid data before touching the saved file', async () => {

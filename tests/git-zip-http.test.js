@@ -21,7 +21,7 @@ test('ZIP HTTP setup confirms the displayed remote before a real push and protec
  const port=await new Promise((resolve,reject)=>{let output='';const timer=setTimeout(()=>reject(Error('startup timeout')),5000);child.stdout.on('data',chunk=>{output+=chunk;const match=output.match(/TEST_PORT=(\d+)/);if(match){clearTimeout(timer);resolve(match[1])}});child.on('exit',code=>{clearTimeout(timer);reject(Error('server exit '+code))})});
  const endpoint='http://127.0.0.1:'+port+'/git-sync';
  const request=async(data,headers={})=>{const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-MakeX-Sync':'1',...headers},body:JSON.stringify(data)});return {status:response.status,result:await response.json()}};
- const status=await (await fetch(endpoint+'/status')).json();assert.equal(status.version,'2026-11-04.sync2');assert.equal(status.repositoryPresent,false);
+ const status=await (await fetch(endpoint+'/status')).json();assert.equal(status.version,'2026-11-05.sync3');assert.equal(status.repositoryPresent,false);
  const mine=structuredClone(original);mine.explorer.push({name:'新增课程',objectives:'真实目标'});
  const first=await request(mine);assert.equal(first.status,409);assert.equal(first.result.code,'SYNC_SETUP_REQUIRED');assert.equal(first.result.setup.remoteCommit,before);assert.equal(first.result.setup.localCounts.explorer,2);assert.equal(await git(remote,'rev-parse','main'),before);
  assert.deepEqual(JSON.parse(await fs.readFile(path.join(app,'makex_data.json'),'utf8')),mine);
@@ -33,4 +33,29 @@ test('ZIP HTTP setup confirms the displayed remote before a real push and protec
  assert.equal((await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-MakeX-Sync':'1',Origin:'https://evil.example'},body:JSON.stringify(mine)})).status,403);
  await assert.rejects(exec(process.execPath,[path.join(app,'sync-courses.js')],{cwd:app,env}),error=>/GitHub 上的课程也有更新/.test(error.stderr));
  assert.equal(await git(remote,'rev-parse','main'),concurrent);
+});
+
+test('a local old repository connects explicitly through HTTP without rewriting its origin, branch or staged work',async t=>{
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'makex-old-repo-http-')),app=path.join(dir,'old-project'),seed=path.join(dir,'seed'),remote=path.join(dir,'target.git');
+ const env={...process.env,GIT_CONFIG_GLOBAL:path.join(dir,'gitconfig'),GIT_CONFIG_NOSYSTEM:'1',PORT:'0'};
+ const git=async(cwd,...args)=>(await exec('git',args,{cwd,env})).stdout.trim();
+ await fs.mkdir(app);await fs.mkdir(seed);await git(dir,'config','--global','user.name','Reconnect Test');await git(dir,'config','--global','user.email','reconnect@example.invalid');
+ const target='https://github.com/caoweiming111-web/ChatGPT-caoweiming.git',oldOrigin='https://github.com/caoweiming111-web/makex.git';await git(dir,'config','--global','url.'+remote+'.insteadOf',target);
+ await git(dir,'init','--bare','--initial-branch=main',remote);await git(seed,'init','--initial-branch=main');
+ const base={inspire:[],explorer:[{name:'原始课程'}],explorer2:[],challenge:[]};await fs.writeFile(path.join(seed,'makex_data.json'),JSON.stringify(base));await git(seed,'add','.');await git(seed,'commit','-m','initial target');await git(seed,'remote','add','origin',target);await git(seed,'push','origin','main');
+ const targetBefore=await git(remote,'rev-parse','main');
+ for(const file of ['server.js','sync-courses.js','managed-git-sync.js'])await fs.copyFile(path.join(__dirname,'..',file),path.join(app,file));
+ await fs.writeFile(path.join(app,'makex_data.json'),JSON.stringify(base));await git(app,'init','--initial-branch=legacy');await git(app,'add','.');await git(app,'commit','-m','old project');await git(app,'remote','add','origin',oldOrigin);
+ await fs.writeFile(path.join(app,'private.txt'),'staged user work');await git(app,'add','private.txt');
+ const originalHead=await git(app,'rev-parse','HEAD'),originalIndex=await git(app,'ls-files','--stage');
+ await fs.writeFile(path.join(app,'start.js'),"const http=require('http');const original=http.Server.prototype.listen;http.Server.prototype.listen=function(...args){this.once('listening',()=>console.log('TEST_PORT='+this.address().port));return original.apply(this,args)};require('./server');");
+ const child=spawn(process.execPath,['start.js'],{cwd:app,env,stdio:['ignore','pipe','pipe']});t.after(async()=>{if(child.exitCode===null){child.kill();await once(child,'exit')}await fs.rm(dir,{recursive:true,force:true})});
+ const port=await new Promise((resolve,reject)=>{let output='';const timer=setTimeout(()=>reject(Error('startup timeout')),5000);child.stdout.on('data',chunk=>{output+=chunk;const m=output.match(/TEST_PORT=(\d+)/);if(m){clearTimeout(timer);resolve(m[1])}});child.on('exit',code=>{clearTimeout(timer);reject(Error('exit '+code))})});
+ const endpoint='http://127.0.0.1:'+port+'/git-sync';const request=async(body,headers={})=>{const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-MakeX-Sync':'1',...headers},body:JSON.stringify(body)});return {status:res.status,value:await res.json()}};
+ const mine=structuredClone(base);mine.explorer.push({name:'本机新课程'});
+ assert.equal((await request(mine)).value.code,'WRONG_REMOTE');assert.equal(await git(remote,'rev-parse','main'),targetBefore);await assert.rejects(fs.stat(path.join(app,'.makex-github')),{code:'ENOENT'});
+ const setup=await request(mine,{'X-MakeX-Use-Managed':'1'});assert.equal(setup.status,409);assert.equal(setup.value.code,'SYNC_SETUP_REQUIRED');assert.equal(await git(remote,'rev-parse','main'),targetBefore);
+ const result=await request(mine,{'X-MakeX-Use-Managed':'1','X-MakeX-Confirm-Setup':setup.value.setup.remoteCommit});assert.equal(result.status,200);assert.equal(result.value.managedRepository,true);assert.deepEqual(JSON.parse(await git(remote,'show','main:makex_data.json')),mine);
+ mine.explorer.push({name:'连接后继续编辑'});assert.equal((await request(mine)).status,200);assert.deepEqual(JSON.parse(await git(remote,'show','main:makex_data.json')),mine);
+ assert.equal(await git(app,'config','--get','remote.origin.url'),oldOrigin);assert.equal(await git(app,'branch','--show-current'),'legacy');assert.equal(await git(app,'rev-parse','HEAD'),originalHead);assert.equal(await git(app,'ls-files','--stage'),originalIndex);assert.equal(await fs.readFile(path.join(app,'private.txt'),'utf8'),'staged user work');
 });

@@ -12,7 +12,7 @@ else {
       try {
         const info = JSON.parse(body);
         const normalize = value => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
-        if (response.statusCode === 200 && info.version === '2026-11-04.sync2' && normalize(info.directory) === normalize(__dirname)) {
+        if (response.statusCode === 200 && info.version === '2026-11-05.sync3' && normalize(info.directory) === normalize(__dirname)) {
           console.log('当前目录的 MakeX 服务已经运行，将打开页面。'); process.exitCode = 0; return;
         }
       } catch {}
